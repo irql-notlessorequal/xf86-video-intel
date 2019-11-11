@@ -93,10 +93,20 @@ static const XvAttributeRec attribs[] = {
 	{ XvSettable | XvGettable, 0, 1, (char *)"XV_ALWAYS_ON_TOP" },
 };
 
+static void sna_video_sprite_hide(xf86CrtcPtr crtc, struct sna_video *video)
+{
+	struct local_mode_set_plane s = {
+		.plane_id = sna_crtc_to_sprite(crtc, video->idx),
+	};
+
+	if (drmIoctl(video->sna->kgem.fd, LOCAL_IOCTL_MODE_SETPLANE, &s))
+		xf86DrvMsg(video->sna->scrn->scrnIndex, X_ERROR,
+			   "failed to disable plane\n");
+}
+
 static int sna_video_sprite_stop(ddStopVideo_ARGS)
 {
 	struct sna_video *video = port->devPriv.ptr;
-	struct local_mode_set_plane s;
 	xf86CrtcConfigPtr config = XF86_CRTC_CONFIG_PTR(video->sna->scrn);
 	int i;
 
@@ -109,12 +119,7 @@ static int sna_video_sprite_stop(ddStopVideo_ARGS)
 		if (video->bo[index] == NULL)
 			continue;
 
-		memset(&s, 0, sizeof(s));
-		s.plane_id = sna_crtc_to_sprite(crtc, video->idx);
-		if (drmIoctl(video->sna->kgem.fd, LOCAL_IOCTL_MODE_SETPLANE, &s))
-			xf86DrvMsg(video->sna->scrn->scrnIndex, X_ERROR,
-				   "failed to disable plane\n");
-
+		sna_video_sprite_hide(crtc, video);
 		kgem_bo_replace(&video->sna->kgem, &video->bo[index], NULL);
 	}
 
@@ -322,13 +327,8 @@ sna_video_sprite_show(struct sna *sna,
 		if (drmIoctl(sna->kgem.fd,
 			     LOCAL_IOCTL_I915_SET_SPRITE_COLORKEY,
 			     &set)) {
-			memset(&s, 0, sizeof(s));
-			s.plane_id = sna_crtc_to_sprite(crtc, video->idx);
-
 			/* try to disable the plane first */
-			if (drmIoctl(video->sna->kgem.fd, LOCAL_IOCTL_MODE_SETPLANE, &s))
-				xf86DrvMsg(video->sna->scrn->scrnIndex, X_ERROR,
-					   "failed to disable plane\n");
+			sna_video_sprite_hide(crtc, video);
 
 			if (drmIoctl(sna->kgem.fd, LOCAL_IOCTL_I915_SET_SPRITE_COLORKEY, &set)) {
 				xf86DrvMsg(sna->scrn->scrnIndex, X_ERROR,
@@ -542,12 +542,7 @@ retry:
 off:
 			assert(index < ARRAY_SIZE(video->bo));
 			if (video->bo[index]) {
-				struct local_mode_set_plane s;
-				memset(&s, 0, sizeof(s));
-				s.plane_id = sna_crtc_to_sprite(crtc, video->idx);
-				if (drmIoctl(video->sna->kgem.fd, LOCAL_IOCTL_MODE_SETPLANE, &s))
-					xf86DrvMsg(video->sna->scrn->scrnIndex, X_ERROR,
-						   "failed to disable plane\n");
+				sna_video_sprite_hide(crtc, video);
 				kgem_bo_replace(&sna->kgem, &video->bo[index], NULL);
 			}
 			continue;
