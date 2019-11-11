@@ -548,7 +548,7 @@ off:
 				if (drmIoctl(video->sna->kgem.fd, LOCAL_IOCTL_MODE_SETPLANE, &s))
 					xf86DrvMsg(video->sna->scrn->scrnIndex, X_ERROR,
 						   "failed to disable plane\n");
-				video->bo[index] = NULL;
+				kgem_bo_replace(&sna->kgem, &video->bo[index], NULL);
 			}
 			continue;
 		}
