@@ -93,15 +93,34 @@ static const XvAttributeRec attribs[] = {
 	{ XvSettable | XvGettable, 0, 1, (char *)"XV_ALWAYS_ON_TOP" },
 };
 
+#define DRM_I915_SET_SPRITE_COLORKEY 0x2b
+#define LOCAL_IOCTL_I915_SET_SPRITE_COLORKEY DRM_IOWR(DRM_COMMAND_BASE + DRM_I915_SET_SPRITE_COLORKEY, struct local_intel_sprite_colorkey)
+#define LOCAL_IOCTL_MODE_ADDFB2 DRM_IOWR(0xb8, struct local_mode_fb_cmd2)
+
+struct local_intel_sprite_colorkey {
+	uint32_t plane_id;
+	uint32_t min_value;
+	uint32_t channel_mask;
+	uint32_t max_value;
+	uint32_t flags;
+};
+
 static void sna_video_sprite_hide(xf86CrtcPtr crtc, struct sna_video *video)
 {
 	struct local_mode_set_plane s = {
 		.plane_id = sna_crtc_to_sprite(crtc, video->idx),
 	};
+	struct local_intel_sprite_colorkey key = {
+		.plane_id = sna_crtc_to_sprite(crtc, video->idx),
+	};
+	int index = sna_crtc_index(crtc);
 
 	if (drmIoctl(video->sna->kgem.fd, LOCAL_IOCTL_MODE_SETPLANE, &s))
 		xf86DrvMsg(video->sna->scrn->scrnIndex, X_ERROR,
 			   "failed to disable plane\n");
+
+	drmIoctl(video->sna->kgem.fd, LOCAL_IOCTL_I915_SET_SPRITE_COLORKEY, &key);
+	video->color_key_changed |= 1 << index;
 }
 
 static int sna_video_sprite_stop(ddStopVideo_ARGS)
@@ -300,18 +319,8 @@ sna_video_sprite_show(struct sna *sna,
 	VG_CLEAR(s);
 	s.plane_id = sna_crtc_to_sprite(crtc, video->idx);
 
-#define DRM_I915_SET_SPRITE_COLORKEY 0x2b
-#define LOCAL_IOCTL_I915_SET_SPRITE_COLORKEY DRM_IOWR(DRM_COMMAND_BASE + DRM_I915_SET_SPRITE_COLORKEY, struct local_intel_sprite_colorkey)
-#define LOCAL_IOCTL_MODE_ADDFB2 DRM_IOWR(0xb8, struct local_mode_fb_cmd2)
-
 	if (video->color_key_changed & (1 << index) && video->has_color_key) {
-		struct local_intel_sprite_colorkey {
-			uint32_t plane_id;
-			uint32_t min_value;
-			uint32_t channel_mask;
-			uint32_t max_value;
-			uint32_t flags;
-		} set;
+		struct local_intel_sprite_colorkey set;
 
 		DBG(("%s: updating color key: %x\n",
 		     __FUNCTION__, video->color_key));
