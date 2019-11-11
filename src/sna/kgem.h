@@ -411,6 +411,15 @@ static inline void kgem_bo_destroy(struct kgem *kgem, struct kgem_bo *bo)
 		_kgem_bo_destroy(kgem, bo);
 }
 
+static inline void kgem_bo_replace(struct kgem *kgem,
+				   struct kgem_bo **bo,
+				   struct kgem_bo *new_bo)
+{
+	if (*bo)
+		kgem_bo_destroy(kgem, *bo);
+	*bo = new_bo ? kgem_bo_reference(new_bo) : NULL;
+}
+
 void kgem_clear_dirty(struct kgem *kgem);
 
 static inline void kgem_set_mode(struct kgem *kgem,
