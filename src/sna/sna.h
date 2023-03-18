@@ -670,6 +670,11 @@ static inline unsigned sna_crtc_pipe(xf86CrtcPtr crtc)
 	return *sna_crtc_flags(crtc) >> 8 & 0xff;
 }
 
+static inline unsigned sna_crtc_index(xf86CrtcPtr crtc)
+{
+	return *sna_crtc_flags(crtc) >> 16 & 0xff;
+}
+
 static inline bool sna_crtc_is_on(xf86CrtcPtr crtc)
 {
 	return *sna_crtc_flags(crtc) & CRTC_ON;

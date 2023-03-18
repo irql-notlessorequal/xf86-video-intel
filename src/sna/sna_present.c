@@ -104,27 +104,27 @@ static inline bool has_vblank(xf86CrtcPtr crtc)
 	return (uintptr_t)crtc & 1;
 }
 
-static inline int pipe_from_crtc(RRCrtcPtr crtc)
+static inline int crtc_index_from_crtc(RRCrtcPtr crtc)
 {
-	return crtc ? sna_crtc_pipe(crtc->devPrivate) : -1;
+	return crtc ? sna_crtc_index(crtc->devPrivate) : -1;
 }
 
-static uint32_t pipe_select(int pipe)
+static uint32_t crtc_select(int index)
 {
-	if (pipe > 1)
-		return pipe << DRM_VBLANK_HIGH_CRTC_SHIFT;
-	else if (pipe > 0)
+	if (index > 1)
+		return index << DRM_VBLANK_HIGH_CRTC_SHIFT;
+	else if (index > 0)
 		return DRM_VBLANK_SECONDARY;
 	else
 		return 0;
 }
 
-static inline int sna_wait_vblank(struct sna *sna, union drm_wait_vblank *vbl, int pipe)
+static inline int sna_wait_vblank(struct sna *sna, union drm_wait_vblank *vbl, int index)
 {
-	DBG(("%s(pipe=%d, waiting until seq=%u%s)\n",
-	     __FUNCTION__, pipe, vbl->request.sequence,
+	DBG(("%s(crtc=%d, waiting until seq=%u%s)\n",
+	     __FUNCTION__, index, vbl->request.sequence,
 	     vbl->request.type & DRM_VBLANK_RELATIVE ? " [relative]" : ""));
-	vbl->request.type |= pipe_select(pipe);
+	vbl->request.type |= crtc_select(index);
 	return drmIoctl(sna->kgem.fd, DRM_IOCTL_WAIT_VBLANK, vbl);
 }
 
@@ -228,7 +228,7 @@ static CARD32 sna_fake_vblank_handler(OsTimerPtr timer, CARD32 now, void *data)
 	VG_CLEAR(vbl);
 	vbl.request.type = (uint32_t)DRM_VBLANK_RELATIVE;
 	vbl.request.sequence = 0;
-	if (sna_wait_vblank(info->sna, &vbl, sna_crtc_pipe(info->crtc)) == 0) {
+	if (sna_wait_vblank(info->sna, &vbl, sna_crtc_index(info->crtc)) == 0) {
 		ust = ust64(vbl.reply.tval_sec, vbl.reply.tval_usec);
 		msc = sna_crtc_record_vblank(info->crtc, &vbl);
 		DBG(("%s: event=%lld, target msc=%lld, now %lld\n",
@@ -243,7 +243,7 @@ static CARD32 sna_fake_vblank_handler(OsTimerPtr timer, CARD32 now, void *data)
 				vbl.request.type = DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT;
 				vbl.request.sequence = info->target_msc;
 				vbl.request.signal = (uintptr_t)MARK_PRESENT(info);
-				if (sna_wait_vblank(info->sna, &vbl, sna_crtc_pipe(info->crtc)) == 0) {
+				if (sna_wait_vblank(info->sna, &vbl, sna_crtc_index(info->crtc)) == 0) {
 					DBG(("%s: scheduled new vblank event for %lld\n", __FUNCTION__, (long long)info->target_msc));
 					add_to_crtc_vblank(info, delta);
 					free(timer);
@@ -263,7 +263,7 @@ static CARD32 sna_fake_vblank_handler(OsTimerPtr timer, CARD32 now, void *data)
 			DBG(("%s: blocking wait!\n", __FUNCTION__));
 			vbl.request.type = (uint32_t)DRM_VBLANK_ABSOLUTE;
 			vbl.request.sequence = info->target_msc;
-			if (sna_wait_vblank(info->sna, &vbl, sna_crtc_pipe(info->crtc)) == 0) {
+			if (sna_wait_vblank(info->sna, &vbl, sna_crtc_index(info->crtc)) == 0) {
 				ust = ust64(vbl.reply.tval_sec, vbl.reply.tval_usec);
 				msc = sna_crtc_record_vblank(info->crtc, &vbl);
 			} else {
@@ -337,7 +337,7 @@ static bool sna_present_queue(struct sna_present_event *info,
 	vbl.request.sequence = info->target_msc;
 	vbl.request.signal = (uintptr_t)MARK_PRESENT(info);
 	if (delta > 2 ||
-	    sna_wait_vblank(info->sna, &vbl, sna_crtc_pipe(info->crtc))) {
+	    sna_wait_vblank(info->sna, &vbl, sna_crtc_index(info->crtc))) {
 		DBG(("%s: vblank enqueue failed, faking delta=%d\n", __FUNCTION__, delta));
 		if (!sna_fake_vblank(info))
 			return false;
@@ -408,7 +408,7 @@ static void add_keepalive(struct sna *sna, xf86CrtcPtr crtc, uint64_t msc)
 	vbl.request.sequence = msc;
 	vbl.request.signal = (uintptr_t)MARK_PRESENT(info);
 
-	if (sna_wait_vblank(info->sna, &vbl, sna_crtc_pipe(crtc)) == 0) {
+	if (sna_wait_vblank(info->sna, &vbl, sna_crtc_index(crtc)) == 0) {
 		list_add_tail(&info->link, &tmp->link);
 		add_to_crtc_vblank(info, 1);
 		info->queued = true;
@@ -432,7 +432,7 @@ sna_present_get_ust_msc(RRCrtcPtr crtc, CARD64 *ust, CARD64 *msc)
 	VG_CLEAR(vbl);
 	vbl.request.type = (uint32_t)DRM_VBLANK_RELATIVE;
 	vbl.request.sequence = 0;
-	if (sna_wait_vblank(sna, &vbl, sna_crtc_pipe(crtc->devPrivate)) == 0) {
+	if (sna_wait_vblank(sna, &vbl, sna_crtc_index(crtc->devPrivate)) == 0) {
 		*ust = ust64(vbl.reply.tval_sec, vbl.reply.tval_usec);
 		*msc = sna_crtc_record_vblank(crtc->devPrivate, &vbl);
 

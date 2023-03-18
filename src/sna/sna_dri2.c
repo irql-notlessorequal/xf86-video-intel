@@ -118,7 +118,7 @@ struct sna_dri2_event {
 	ClientPtr client;
 	enum event_type type;
 	xf86CrtcPtr crtc;
-	int pipe;
+	int index;
 	bool queued;
 	bool sync;
 	bool chained;
@@ -1459,17 +1459,17 @@ sna_dri2_copy_region(DrawablePtr draw,
 	__sna_dri2_copy_region(sna, draw, region, src, dst, DRI2_DAMAGE);
 }
 
-inline static uint32_t pipe_select(int pipe)
+inline static uint32_t crtc_select(int index)
 {
 	/* The third pipe was introduced with IvyBridge long after
 	 * multiple pipe support was added to the kernel, hence
 	 * we can safely ignore the capability check - if we have more
 	 * than two pipes, we can assume that they are fully supported.
 	 */
-	assert(pipe < _DRM_VBLANK_HIGH_CRTC_MASK);
-	if (pipe > 1)
-		return pipe << DRM_VBLANK_HIGH_CRTC_SHIFT;
-	else if (pipe > 0)
+	assert(index < _DRM_VBLANK_HIGH_CRTC_MASK);
+	if (index > 1)
+		return index << DRM_VBLANK_HIGH_CRTC_SHIFT;
+	else if (index > 0)
 		return DRM_VBLANK_SECONDARY;
 	else
 		return 0;
@@ -1479,15 +1479,15 @@ static inline bool sna_next_vblank(struct sna_dri2_event *info)
 {
 	union drm_wait_vblank vbl;
 
-	DBG(("%s(pipe=%d, waiting until next vblank)\n",
-	     __FUNCTION__, info->pipe));
-	assert(info->pipe != -1);
+	DBG(("%s(crtc=%d, waiting until next vblank)\n",
+	     __FUNCTION__, info->index));
+	assert(info->index != -1);
 
 	VG_CLEAR(vbl);
 	vbl.request.type =
 		DRM_VBLANK_RELATIVE |
 		DRM_VBLANK_EVENT |
-		pipe_select(info->pipe);
+		crtc_select(info->index);
 	vbl.request.sequence = 1;
 	vbl.request.signal = (uintptr_t)info;
 
@@ -1504,15 +1504,15 @@ static inline bool sna_wait_vblank(struct sna_dri2_event *info,
 {
 	union drm_wait_vblank vbl;
 
-	DBG(("%s(pipe=%d, waiting until vblank %u)\n",
-	     __FUNCTION__, info->pipe, seq));
-	assert(info->pipe != -1);
+	DBG(("%s(crtc=%d, waiting until vblank %u)\n",
+	     __FUNCTION__, info->index, seq));
+	assert(info->index != -1);
 
 	VG_CLEAR(vbl);
 	vbl.request.type =
 		DRM_VBLANK_ABSOLUTE |
 		DRM_VBLANK_EVENT |
-		pipe_select(info->pipe);
+		crtc_select(info->index);
 	vbl.request.sequence = seq;
 	vbl.request.signal = (uintptr_t)info;
 
@@ -1610,8 +1610,8 @@ static void frame_swap_complete(struct sna_dri2_event *frame, int type)
 	assert(frame->draw);
 
 	swap = sna_crtc_last_swap(frame->crtc);
-	DBG(("%s(type=%d): draw=%ld, pipe=%d, frame=%lld [msc=%lld], tv=%d.%06d\n",
-	     __FUNCTION__, type, (long)frame->draw->id, frame->pipe,
+	DBG(("%s(type=%d): draw=%ld, crtc=%d, frame=%lld [msc=%lld], tv=%d.%06d\n",
+	     __FUNCTION__, type, (long)frame->draw->id, frame->index,
 	     (long long)swap->msc,
 	     (long long)draw_current_msc(frame->draw, frame->crtc, swap->msc),
 	     swap->tv_sec, swap->tv_usec));
@@ -1809,7 +1809,7 @@ sna_dri2_add_event(struct sna *sna,
 	info->sna = sna;
 	info->draw = draw;
 	info->crtc = crtc;
-	info->pipe = sna_crtc_pipe(crtc);
+	info->index = sna_crtc_index(crtc);
 	info->keepalive = 1;
 
 	if (!add_event_to_client(info, sna, client)) {
@@ -2749,8 +2749,8 @@ sna_dri2_immediate_blit(struct sna *sna,
 	if (sna->flags & SNA_NO_WAIT)
 		sync = false;
 
-	DBG(("%s: emitting immediate blit, throttling client, synced? %d, chained? %d, pipe %d\n",
-	     __FUNCTION__, sync, chain != info, info->pipe));
+	DBG(("%s: emitting immediate blit, throttling client, synced? %d, chained? %d, crtc %d\n",
+	     __FUNCTION__, sync, chain != info, info->index));
 	assert(chain);
 
 	info->type = SWAP_COMPLETE;
@@ -2925,7 +2925,8 @@ static void sna_dri2_flip_event(struct sna_dri2_event *flip)
 {
 	struct sna *sna = flip->sna;
 
-	DBG(("%s flip=%p (pipe=%d, event=%d, queued?=%d)\n", __FUNCTION__, flip, flip->pipe, flip->type, flip->queued));
+	DBG(("%s flip=%p (crtc=%d, event=%d, queued?=%d)\n",
+	     __FUNCTION__, flip, flip->index, flip->type, flip->queued));
 	if (!flip->queued) /* pageflip died whilst being queued */
 		return;
 	flip->queued = false;
@@ -2995,7 +2996,7 @@ sna_query_vblank(struct sna *sna, xf86CrtcPtr crtc, union drm_wait_vblank *vbl)
 {
 	VG_CLEAR(*vbl);
 	vbl->request.type =
-		_DRM_VBLANK_RELATIVE | pipe_select(sna_crtc_pipe(crtc));
+		_DRM_VBLANK_RELATIVE | crtc_select(sna_crtc_index(crtc));
 	vbl->request.sequence = 0;
 
 	return drmIoctl(sna->kgem.fd, DRM_IOCTL_WAIT_VBLANK, vbl);
