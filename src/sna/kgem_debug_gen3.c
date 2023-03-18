@@ -1279,7 +1279,7 @@ gen3_decode_3d_1d(struct kgem *kgem, uint32_t offset)
 		return len;
 	case 0x05:
 		kgem_debug_print(data, offset, 0, "3DSTATE_PIXEL_SHADER_PROGRAM\n");
-		len = (data[0] & 0x000000ff) + 2;
+		len = (data[0] & 0x000001ff) + 2;
 		assert(((len-1) % 3) == 0);
 		assert(len <= 370);
 		i = 1;
