@@ -1284,7 +1284,7 @@ gen3_decode_3d_1d(struct kgem *kgem, uint32_t offset)
 		assert(len <= 370);
 		i = 1;
 		for (instr = 0; instr < (len - 1) / 3; instr++) {
-			char instr_prefix[10];
+			char instr_prefix[13];
 
 			sprintf(instr_prefix, "PS%03d", instr);
 			gen3_decode_instruction(data, offset, i, instr_prefix);
