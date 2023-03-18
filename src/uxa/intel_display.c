@@ -106,6 +106,7 @@ struct intel_crtc {
 	drmModeModeInfo kmode;
 	drmModeCrtcPtr mode_crtc;
 	int pipe;
+	int index;
 	dri_bo *cursor;
 	dri_bo *rotate_bo;
 	uint32_t rotate_pitch;
@@ -755,6 +756,7 @@ intel_crtc_init(ScrnInfoPtr scrn, struct intel_mode *mode, drmModeResPtr mode_re
 
 	intel_crtc->pipe = drm_intel_get_pipe_from_crtc_id(intel->bufmgr,
 							   crtc_id(intel_crtc));
+	intel_crtc->index = num;
 
 	intel_crtc->cursor = drm_intel_bo_alloc(intel->bufmgr, "ARGB cursor",
 						4*64*64, 4096);
@@ -1768,7 +1770,7 @@ intel_do_pageflip(intel_screen_private *intel,
 		/* Only the reference crtc will finally deliver its page flip
 		 * completion event. All other crtc's events will be discarded.
 		 */
-		flip->dispatch_me = (intel_crtc_to_pipe(crtc->crtc) == ref_crtc_hw_id);
+		flip->dispatch_me = (intel_crtc_to_index(crtc->crtc) == ref_crtc_hw_id);
 		flip->mode = mode;
 
 		seq = intel_drm_queue_alloc(scrn, config->crtc[i], flip, intel_pageflip_handler, intel_pageflip_abort);
@@ -1913,11 +1915,11 @@ intel_drm_abort_scrn(ScrnInfoPtr scrn)
 	}
 }
 
-static uint32_t pipe_select(int pipe)
+static uint32_t crtc_select(int index)
 {
-	if (pipe > 1)
-		return pipe << DRM_VBLANK_HIGH_CRTC_SHIFT;
-	else if (pipe > 0)
+	if (index > 1)
+		return index << DRM_VBLANK_HIGH_CRTC_SHIFT;
+	else if (index > 0)
 		return DRM_VBLANK_SECONDARY;
 	else
 		return 0;
@@ -1933,7 +1935,7 @@ intel_get_msc_ust(ScrnInfoPtr scrn, xf86CrtcPtr crtc, uint32_t *msc, uint64_t *u
 	drmVBlank vbl;
 
 	/* Get current count */
-	vbl.request.type = DRM_VBLANK_RELATIVE | pipe_select(intel_crtc_to_pipe(crtc));
+	vbl.request.type = DRM_VBLANK_RELATIVE | crtc_select(intel_crtc_to_index(crtc));
 	vbl.request.sequence = 0;
 	vbl.request.signal = 0;
 	if (drmWaitVBlank(intel->drmSubFD, &vbl)) {
@@ -2347,6 +2349,12 @@ int intel_crtc_to_pipe(xf86CrtcPtr crtc)
 {
 	struct intel_crtc *intel_crtc = crtc->driver_private;
 	return intel_crtc->pipe;
+}
+
+int intel_crtc_to_index(xf86CrtcPtr crtc)
+{
+	struct intel_crtc *intel_crtc = crtc->driver_private;
+	return intel_crtc->index;
 }
 
 Bool intel_crtc_on(xf86CrtcPtr crtc)

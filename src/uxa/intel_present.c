@@ -58,11 +58,11 @@ struct intel_present_vblank_event {
 	uint64_t        event_id;
 };
 
-static uint32_t pipe_select(int pipe)
+static uint32_t crtc_select(int index)
 {
-	if (pipe > 1)
-		return pipe << DRM_VBLANK_HIGH_CRTC_SHIFT;
-	else if (pipe > 0)
+	if (index > 1)
+		return index << DRM_VBLANK_HIGH_CRTC_SHIFT;
+	else if (index > 0)
 		return DRM_VBLANK_SECONDARY;
 	else
 		return 0;
@@ -92,7 +92,7 @@ intel_present_get_crtc(WindowPtr window)
 }
 
 static int
-intel_present_crtc_pipe(ScreenPtr screen, RRCrtcPtr randr_crtc)
+intel_present_crtc_index(ScreenPtr screen, RRCrtcPtr randr_crtc)
 {
 	xf86CrtcPtr crtc;
 
@@ -100,7 +100,7 @@ intel_present_crtc_pipe(ScreenPtr screen, RRCrtcPtr randr_crtc)
 		return 0;
 
 	crtc = randr_crtc->devPrivate;
-	return intel_crtc_to_pipe(crtc);
+	return intel_crtc_to_index(crtc);
 }
 
 static int
@@ -162,7 +162,7 @@ intel_present_queue_vblank(RRCrtcPtr                    crtc,
 	ScreenPtr                               screen = crtc->pScreen;
 	ScrnInfoPtr                             scrn = xf86ScreenToScrn(screen);
 	intel_screen_private                    *intel = intel_get_screen_private(scrn);
-	int                                     pipe = intel_present_crtc_pipe(screen, crtc);
+	int                                     index = intel_present_crtc_index(screen, crtc);
 	struct intel_present_vblank_event       *event;
 	drmVBlank                               vbl;
 	int                                     ret;
@@ -180,7 +180,7 @@ intel_present_queue_vblank(RRCrtcPtr                    crtc,
 		return BadAlloc;
 	}
 
-	vbl.request.type = DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | pipe_select(pipe);
+	vbl.request.type = DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | crtc_select(index);
 	vbl.request.sequence = intel_crtc_msc_to_sequence(scrn, xf86_crtc, msc);
 	vbl.request.signal = seq;
 	for (;;) {
@@ -315,7 +315,7 @@ intel_present_flip(RRCrtcPtr                    crtc,
 	ScrnInfoPtr                             scrn = xf86ScreenToScrn(screen);
 	intel_screen_private                    *intel = intel_get_screen_private(scrn);
 	struct intel_present_vblank_event       *event;
-	int                                     pipe = intel_present_crtc_pipe(screen, crtc);
+	int                                     index = intel_present_crtc_index(screen, crtc);
 	dri_bo                                  *bo;
 	Bool                                    ret;
 
@@ -332,7 +332,7 @@ intel_present_flip(RRCrtcPtr                    crtc,
 
 	event->event_id = event_id;
 
-	ret = intel_do_pageflip(intel, bo, pipe, !sync_flip,
+	ret = intel_do_pageflip(intel, bo, index, !sync_flip,
 				event,
 				intel_present_flip_event,
 				intel_present_flip_abort);
