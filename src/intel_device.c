@@ -335,9 +335,9 @@ static int __intel_open_device__major_minor(int _major, int _minor)
 static int __intel_open_device__pci(const struct pci_device *pci)
 {
 	struct stat st;
-	char path[256];
-	DIR *dir;
 	struct dirent *de;
+	char path[64+sizeof(de->d_name)];
+	DIR *dir;
 	int base;
 	int fd;
 
