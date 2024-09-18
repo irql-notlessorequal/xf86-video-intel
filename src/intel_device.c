@@ -563,8 +563,11 @@ static int is_master(int fd)
 	sv.drm_di_minor = 1;
 	sv.drm_dd_major = -1;
 	sv.drm_dd_minor = -1;
-
-	return drmIoctl(fd, DRM_IOCTL_SET_VERSION, &sv) == 0;
+	
+	int ret = drmIoctl(fd, DRM_IOCTL_SET_VERSION, &sv);
+	xf86Msg(X_INFO, "[intel::is_master] %i(1.1)=%i\n", fd, ret);
+//	return drmIoctl(fd, DRM_IOCTL_SET_VERSION, &sv) == 0;
+	return ret == 0;
 }
 
 int intel_open_device(int entity_num,
