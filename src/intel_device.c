@@ -564,10 +564,7 @@ static int is_master(int fd)
 	sv.drm_dd_major = -1;
 	sv.drm_dd_minor = -1;
 	
-	int ret = drmIoctl(fd, DRM_IOCTL_SET_VERSION, &sv);
-	xf86Msg(X_INFO, "[intel::is_master] %i(1.1)=%i\n", fd, ret);
-//	return drmIoctl(fd, DRM_IOCTL_SET_VERSION, &sv) == 0;
-	return ret == 0;
+	return drmIoctl(fd, DRM_IOCTL_SET_VERSION, &sv) == 0;
 }
 
 int intel_open_device(int entity_num,
@@ -614,16 +611,24 @@ int intel_open_device(int entity_num,
 
 	/* If hosted under a system compositor, just pretend to be master */
 	if (hosted())
+	{
 		master_count++;
+	}
 
 	/* Non-root user holding MASTER, don't let go */
 	if (geteuid() && is_master(fd))
+	{
 		master_count++;
+	}
 
 	if (pci)
+	{
 		dev->device_id = pci->device_id;
+	}
 	else
+	{
 		dev->device_id = __intel_get_device_id(fd);
+	}
 
 	dev->idx = entity_num;
 	dev->fd = fd;
@@ -634,10 +639,31 @@ int intel_open_device(int entity_num,
 	if (dev->render_node == NULL)
 		dev->render_node = dev->master_node;
 
+	/**
+	 * Check if we have nvidia-drm loaded. find_render_node() is broken and will pick up the wrong node
+	 * if the NVIDIA driver acts as the PRIMARY DRM node.
+	 */
+	if (__requires_nvidia_drm_workaround(dev)) {
+		xf86Msg(X_WARNING, "[intel::intel_open_device] NVIDIA driver detected, applying workaround.\n");
+
+		if (!__get_correct_render_node(dev))
+		{
+#ifdef __linux__
+			xf86Msg(X_ERROR, "[intel::intel_open_device] Workaround failed, making a bold assumption instead.\n");
+#else
+			xf86Msg(X_ERROR, "[intel::intel_open_device] Workaround unavailable, making a bold assumption instead.\n");
+#endif
+			dev->render_node = "/dev/dri/renderD128";
+		}
+
+#if HAS_DEBUG_FULL
+		xf86Msg(X_DEBUG, "[intel::intel_open_device] idx=%i,fd=%i,master_count=%i,master_node=%s,render_node=%s\n", dev->idx,dev->fd, dev->master_count, dev->master_node, dev->render_node);
+#endif
+	}
+
 	xf86GetEntityPrivate(entity_num, intel_device_key)->ptr = dev;
 
 	return fd;
-
 err_close:
 	if (master_count == 0) /* Don't close server-fds */
 		close(fd);
@@ -840,4 +866,174 @@ void intel_put_device(struct intel_device *dev)
 		free(dev->render_node);
 	free(dev->master_node);
 	free(dev);
+}
+
+int intel_is_same_file(int fd1, int fd2) {
+	struct stat stat1, stat2;
+	if (fstat(fd1, &stat1) < 0) return -1;
+	if (fstat(fd2, &stat2) < 0) return -1;
+	return (stat1.st_dev == stat2.st_dev) && (stat1.st_ino == stat2.st_ino);
+}
+
+char *intel_str_replace(char *orig, char *rep, char *with) {
+	char *result;
+	char *ins;
+	char *tmp;
+	int len_rep;
+	int len_with;
+	int len_front;
+	int count;
+
+	if (!orig || !rep)
+		return NULL;
+
+	len_rep = strlen(rep);
+	if (len_rep == 0)
+		return NULL;
+
+	if (!with)
+		with = "";
+	len_with = strlen(with);
+
+	ins = orig;
+	for (count = 0; (tmp = strstr(ins, rep)); ++count) {
+		ins = tmp + len_rep;
+	}
+
+	tmp = result = malloc(strlen(orig) + (len_with - len_rep) * count + 1);
+
+	if (!result)
+		return NULL;
+
+	while (count--) {
+		ins = strstr(orig, rep);
+		len_front = ins - orig;
+		tmp = strncpy(tmp, orig, len_front) + len_front;
+		tmp = strcpy(tmp, with) + len_with;
+		orig += len_front + len_rep; // move to next "end of rep"
+	}
+
+	strcpy(tmp, orig);
+	return result;
+}
+
+#ifdef __linux__
+int __get_correct_render_node(struct intel_device *dev)
+{
+	DIR *d;
+	struct dirent *dir;
+	d = opendir("/dev/dri/by-path/");
+
+	if (!d) {
+		xf86Msg(X_ERROR, "[intel::__get_correct_render_node] Failed to open /dev/dri/by-path!\n");
+		return 0;
+	}
+
+	while ((dir = readdir(d)) != NULL)
+	{
+		/* We need card nodes. Only allow them. */
+		if (strstr(dir->d_name, "-card") == NULL)
+			continue;
+
+		char curr_path[PATH_MAX] = {0};
+		strcat(curr_path, "/dev/dri/by-path/");
+		strcat(curr_path, dir->d_name);
+
+		char true_path[PATH_MAX];
+		if (!realpath(curr_path, true_path))
+		{
+			xf86Msg(X_ERROR, "[intel::__get_correct_render_node:0] realpath(%s) returned an error.\n", curr_path);
+			continue;
+		}
+
+		/* We have the truepath, check if card nodes match our assumed card node. */
+		if (strcmp(dev->master_node, true_path) != 0)
+		{
+#if HAS_DEBUG_FULL
+			xf86Msg(X_DEBUG, "[intel::__get_correct_render_node] strcmp(%s,%s) mismatch.\n", dev->master_node, true_path);
+#endif
+			continue;
+		}
+
+		/* Get the render node and find the realpath, and return that. */
+		char* render_node_candidate = intel_str_replace(curr_path, "-card", "-render");
+
+		int test_fd = open(render_node_candidate, O_RDONLY);
+		if (!test_fd)
+		{
+#if HAS_DEBUG_FULL
+			xf86Msg(X_DEBUG, "[intel::__get_correct_render_node] render node candidate test failed.\n");
+#endif
+			free(render_node_candidate);
+			continue;
+		}
+
+		/* We don't need the FD anymore. */
+		close(test_fd);
+
+		/* Our node probably exists, we're good. */
+		char correct_render_node[PATH_MAX] = {0};
+		if (!realpath(render_node_candidate, correct_render_node))
+		{
+			xf86Msg(X_ERROR, "[intel::__get_correct_render_node:1] realpath(%s) returned an error.\n", render_node_candidate);
+
+			free(render_node_candidate);
+			continue;
+		}
+
+		/* Clean up before returning. */
+		free(render_node_candidate);
+
+		strcpy(dev->render_node, correct_render_node);
+		break;
+	}
+
+	closedir(d);
+	return 1;
+}
+#else
+int __get_correct_render_node(struct intel_device *dev)
+{
+	/* Unsupported environment, surely nothing will go wrong... */
+	return 0;
+}
+#endif
+
+int __requires_nvidia_drm_workaround(struct intel_device *dev)
+{
+	/* Check if we're root or DRM master, if so then workaround not required. */
+	if (strcmp(dev->master_node, "/dev/dri/card0") == 0)
+	{
+#if HAS_DEBUG_FULL
+		xf86Msg(X_DEBUG, "[intel::__requires_nvidia_drm_workaround] STRCMP OK.\n");
+#endif
+		return 0;
+	}
+
+	/* Must be RD_WR as we will be sending an IOCTL to it. */
+	int fd_root = open("/dev/dri/card0", O_RDWR);
+	if (!fd_root)
+	{
+		xf86Msg(X_ERROR, "[intel::__requires_nvidia_drm_workaround] FD_ROOT returned an error.\n");
+		return 0;
+	}
+
+	int fd_curr = open(dev->master_node, O_RDONLY);
+	/* Same card instance, don't worry about it. */
+	if (intel_is_same_file(fd_root, fd_curr))
+	{
+#if HAS_DEBUG_FULL
+		xf86Msg(X_NONE, "[intel::__requires_nvidia_drm_workaround] FD_ROOT is same as FD_CURR.\n");
+#endif
+		close(fd_curr);
+		close(fd_root);
+		return 0;
+	}
+
+	/* Check if the root driver name is "nvidia-drm" */
+	drmVersionPtr version = drmGetVersion(fd_root);
+
+	close(fd_curr);
+	close(fd_root);
+	return strcmp(version->name, "nvidia-drm") == 0;
 }

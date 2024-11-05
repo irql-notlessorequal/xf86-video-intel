@@ -53,15 +53,16 @@ documentation can be read with the following command:
 
 ### Broken hardware acceleration (EGL only) when using Nvidia drivers.
 
-This seems to stem from NVIDIA wanting to take `/dev/dri/card0` as preference so it has full control over the DRM subsystem.
-This breaks Mesa's loader and causes it to try to load Nvidia drivers by default. Mesa doesn't know how to do this so it either segfaults without a patch, or does a fallback to software rendering.
-
-A fix for this is to configure your `initcpio` to load the NVIDIA driver first then the i915 driver.
-
-This seems to fix this issue.
+Fixed in `master` branch as of November 7th 2024.
 
 ### Lack of support on newer hardware.
 
 Generation 11 (Ice Lake) and newer graphics are not supported.
 
 There are no plans to address this, a solution is to use the `modesetting` driver included within XOrg.
+
+### Untested Y-tiling preference.
+
+If you wish to disable this, set the "PreferYTiling" option to "false".
+
+Please create an issue on the repository's issue tracker if you need to disable it.

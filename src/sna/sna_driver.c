@@ -1521,7 +1521,7 @@ static void describe_kms(ScrnInfoPtr scrn)
 		return;
 
 	xf86DrvMsg(scrn->scrnIndex, X_INFO,
-		   "Using Kernel Mode Setting driver: %s, version %d.%d.%d %s\n",
+		   "[Kernel Mode Setting] driver: %s, version %d.%d.%d %s\n",
 		   version.name,
 		   version.version_major, version.version_minor, version.version_patchlevel,
 		   version.date);
