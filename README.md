@@ -39,7 +39,7 @@ documentation can be read with the following command:
 	man intel
 ```
 
-## Changes over the regular xf86-video-intel implementation.
+## Notable changes over the regular xf86-video-intel implementation.
 
 1. Fix for screen freezing if using PRIME and a secondary graphics card.
 2. Restoration and clean up of legacy options.
@@ -61,7 +61,7 @@ Generation 11 (Ice Lake) and newer graphics are not supported.
 
 There are no plans to address this, a solution is to use the `modesetting` driver included within XOrg.
 
-### Untested Y-tiling preference.
+### Untested Y-tiling performance.
 
 If you wish to disable this, set the "PreferYTiling" option to "false".
 

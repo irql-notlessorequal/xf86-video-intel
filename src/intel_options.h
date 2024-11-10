@@ -52,6 +52,12 @@ enum intel_options {
 	OPTION_DEBUG_WAIT,
 	OPTION_BUFFER_CACHE,
 #endif
+#ifdef USE_EGA
+	/**
+	 * Allows the BLT (Blitter) engine to be used to offload memory copies and transfers away from the CPU.
+	 */
+	OPTION_ENABLE_BLITTER,
+#endif
 	NUM_OPTIONS,
 };
 

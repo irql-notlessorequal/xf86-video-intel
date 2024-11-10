@@ -1,6 +1,20 @@
 #ifndef INTEL_DRIVER_H
 #define INTEL_DRIVER_H
 
+#if (defined(__cplusplus) && (__cplusplus >= 201703L)) || \
+    (defined(__STDC_VERSION__) && (__STDC_VERSION__ > 201710L))
+/* Standard C++17/C23 attribute */
+#define FALLTHROUGH [[fallthrough]]
+#elif HAS_CLANG_FALLTHROUGH
+/* Clang++ specific */
+#define FALLTHROUGH [[clang::fallthrough]]
+#elif __has_attribute(fallthrough)
+/* Non-standard but supported by at least gcc and clang */
+#define FALLTHROUGH __attribute__((fallthrough))
+#else
+#define FALLTHROUGH do { } while(0)
+#endif
+
 struct xf86_platform_device;
 
 #define INTEL_VERSION 4000
@@ -124,6 +138,12 @@ struct intel_device_info {
 
 	/* Cherryview is an outlier that isn't supported by the modern Iris driver. */
 	unsigned int force_crocus_driver : 1;
+
+	/* Not all Intel hardware is capable enough to run GLAMOR, flag hardware that can do so. */
+	unsigned int allow_ega : 1;
+
+	/* Hardware is otherwise not supported. */
+	unsigned int force_ega : 1;
 };
 struct intel_device;
 
@@ -151,7 +171,7 @@ int __requires_nvidia_drm_workaround(struct intel_device *dev);
 void intel_detect_chipset(ScrnInfoPtr scrn, struct intel_device *dev);
 
 #define IS_DEFAULT_ACCEL_METHOD(x) ({ \
-	enum { NOACCEL, SNA, UXA } default_accel_method__ = DEFAULT_ACCEL_METHOD; \
+	enum { NOACCEL, SNA, UXA, EGA } default_accel_method__ = DEFAULT_ACCEL_METHOD; \
 	default_accel_method__ == x; \
 })
 

@@ -48,6 +48,9 @@ const OptionInfoRec intel_options[] = {
 	{OPTION_DEBUG_WAIT, "DebugWait", OPTV_BOOLEAN, {0}, 0},
 	{OPTION_BUFFER_CACHE,	"BufferCache",	OPTV_BOOLEAN,   {0},    1},
 #endif
+#ifdef USE_EGA
+	{OPTION_ENABLE_BLITTER, "EnableBlitter", OPTV_BOOLEAN, {0}, 1},
+#endif
 	{-1,			NULL,		OPTV_NONE,	{0},	0}
 };
 

@@ -43,6 +43,7 @@
 #include "legacy/legacy.h"
 #include "sna/sna_module.h"
 #include "uxa/uxa_module.h"
+#include "ega/ega.h"
 
 #include "i915_pciids.h" /* copied from (kernel) include/drm/i915_pciids.h */
 
@@ -88,85 +89,107 @@ static const struct intel_device_info intel_g33_info = {
 
 static const struct intel_device_info intel_i965_info = {
 	.gen = 040,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_g4x_info = {
 	.gen = 045,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_ironlake_info = {
 	.gen = 050,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_sandybridge_info = {
 	.gen = 060,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_ivybridge_info = {
 	.gen = 070,
 	.prefer_y_tiling = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_valleyview_info = {
 	.gen = 071,
 	.prefer_y_tiling = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_haswell_info = {
 	.gen = 075,
 	.prefer_y_tiling = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_broadwell_info = {
 	.gen = 0100,
 	.prefer_y_tiling = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_cherryview_info = {
 	.gen = 0101,
 	.prefer_y_tiling = 1,
 	.force_crocus_driver = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_skylake_info = {
 	.gen = 0110,
 	.prefer_y_tiling = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_broxton_info = {
 	.gen = 0111,
 	.prefer_y_tiling = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_kabylake_info = {
 	.gen = 0112,
 	.prefer_y_tiling = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_geminilake_info = {
 	.gen = 0113,
 	.prefer_y_tiling = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_coffeelake_info = {
 	.gen = 0114,
 	.prefer_y_tiling = 1,
+	.allow_ega = 1,
 };
 
 static const struct intel_device_info intel_cannonlake_info = {
 	.gen = 0120,
+	.allow_ega = 1,
+	.force_ega = 1
 };
 
 static const struct intel_device_info intel_icelake_info = {
 	.gen = 0130,
+	.allow_ega = 1,
+	.force_ega = 1
 };
 
 static const struct intel_device_info intel_elkhartlake_info = {
 	.gen = 0131,
+	.allow_ega = 1,
+	.force_ega = 1
 };
 
 static const struct intel_device_info intel_tigerlake_info = {
 	.gen = 0140,
+	.allow_ega = 1,
+	.force_ega = 1
 };
 
 static const SymTabRec intel_chipsets[] = {
@@ -675,7 +698,7 @@ _xf86findDriver(const char *ident, XF86ConfDevicePtr p)
 	return NULL;
 }
 
-static enum accel_method { NOACCEL, SNA, UXA } get_accel_method(void)
+static enum accel_method { NOACCEL, SNA, UXA, EGA } get_accel_method(void)
 {
 	enum accel_method accel_method = DEFAULT_ACCEL_METHOD;
 	XF86ConfDevicePtr dev;
@@ -698,6 +721,8 @@ static enum accel_method { NOACCEL, SNA, UXA } get_accel_method(void)
 				accel_method = SNA;
 			else if (strcasecmp(s, "uxa") == 0)
 				accel_method = UXA;
+			else if (strcasecmp(s, "ega") == 0)
+				accel_method = EGA;
 		}
 	}
 
@@ -761,6 +786,18 @@ intel_scrn_create(DriverPtr		driver,
 #endif
 	case UXA:
 		return intel_init_scrn(scrn);
+#endif
+
+#if USE_EGA
+	case EGA:
+		if ((unsigned)((struct intel_device_info *)match_data)->allow_ega)
+		{
+			return ega_init_driver(scrn, entity_num);
+		}
+		else
+		{
+			FALLTHROUGH;
+		}
 #endif
 
 	default:
