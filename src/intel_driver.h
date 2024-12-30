@@ -165,6 +165,7 @@ int intel_put_master(struct intel_device *dev);
 void intel_put_device(struct intel_device *dev);
 char *intel_str_replace(char *orig, char *rep, char *with);
 int intel_is_same_file(int fd1, int fd2);
+int __get_render_node_count();
 int __get_correct_render_node(struct intel_device *dev);
 int __requires_nvidia_drm_workaround(struct intel_device *dev);
 
