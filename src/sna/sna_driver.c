@@ -1594,7 +1594,7 @@ Bool sna_init_scrn(ScrnInfoPtr scrn, int entity_num)
 	return TRUE;
 }
 
-#if HAS_DEBUG_FULL
+#if defined(HAS_DEBUG_FULL) || defined(HAS_DEBUG_LOGGING)
 _X_ATTRIBUTE_PRINTF(1, 0) void LogF(const char *f, ...)
 {
 	va_list ap;
