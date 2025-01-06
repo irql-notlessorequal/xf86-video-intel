@@ -18615,9 +18615,11 @@ restart:
 	       sna->timer_active & (1<<(FLUSH_TIMER)));
 
 	if (sna_accel_do_throttle(sna))
-		sna_accel_throttle(sna);
-	assert(!sna->kgem.need_retire ||
+	{
+		assert(!sna->kgem.need_retire ||
 	       sna->timer_active & (1<<(THROTTLE_TIMER)));
+		sna_accel_throttle(sna);
+	}
 
 	if (sna_accel_do_expire(sna))
 		sna_accel_expire(sna);
