@@ -72,6 +72,7 @@ static inline ega * ega_get_screen_private(ScrnInfoPtr scrn)
 	return (ega *)(scrn->driverPrivate);
 }
 
+static ModeStatus ega_valid_mode(ScrnInfoPtr arg, DisplayModePtr mode, Bool verbose, int flags);
 Bool ega_init_driver(ScrnInfoPtr scrn, int entity_num);
 Bool ega_pre_init(ScrnInfoPtr scrn, int flags);
 Bool ega_init_screen(ScreenPtr screen, int argc, char **argv);

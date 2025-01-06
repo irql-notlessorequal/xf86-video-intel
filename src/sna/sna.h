@@ -457,6 +457,7 @@ struct sna {
 	} acpi;
 
 	struct sna_render render;
+	enum BLT_BEHAVIOUR blt_behaviour;
 
 #if DEBUG_MEMORY
 	struct {
@@ -468,6 +469,27 @@ struct sna {
 	} debug_memory;
 #endif
 };
+
+static enum BLT_BEHAVIOUR {
+	UNCHANGED = 0,
+	SMALL_RES_ONLY = 1,
+};
+
+pure static bool handle_blt_behaviour(enum BLT_BEHAVIOUR behaviour, int width, int height)
+{
+	switch (behaviour)
+	{
+		case SMALL_RES_ONLY:
+		{
+			return width < 1536 || height < 1536;
+		}
+
+		default:
+		{
+			return true;
+		}
+	}
+}
 
 #if HAS_PRIME_FLIPPING
 typedef struct _sna_pixmap_priv

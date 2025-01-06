@@ -13,12 +13,20 @@
 #include "ega.h"
 #include "ega_cpu_arch.h"
 #include "ega_helpers.h"
+#include "ega_drm.h"
+#include "ega_pure.h"
 
 Bool ega_init_driver(ScrnInfoPtr scrn, int entity_num)
 {
 	scrn->PreInit = ega_pre_init;
 	scrn->ScreenInit = ega_init_screen;
+	scrn->ValidMode = ega_valid_mode;
 	return TRUE;
+}
+
+static ModeStatus ega_valid_mode(ScrnInfoPtr arg, DisplayModePtr mode, Bool verbose, int flags)
+{
+    return MODE_OK;
 }
 
 Bool ega_pre_init(ScrnInfoPtr scrn, int flags)
@@ -115,6 +123,51 @@ Bool ega_init_screen(ScreenPtr screen, int argc, char **argv)
 	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
 	ega* ega = ega_get_screen_private(scrn);
 
+#ifdef ENABLE_BROKEN_EGA
+	ega->native_xvmc_available = ega->info->gen < 0120;
+#else
+	ega->native_xvmc_available = 0;
+#endif
+
+#ifdef ENABLE_BROKEN_EGA
+	/* Allow BLT on pre-Gen 11 graphics. */
+	ega->blitter_available = ega->info->gen < 0120;
+#else
+	ega->blitter_available = 0;
+#endif
+
+	scrn->pScreen = screen;
+	if (!SetMaster(scrn))
+	{
+		xf86DrvMsg(scrn->scrnIndex, X_ERROR, "SetMaster() returned FALSE.\n");
+		return FALSE;
+	}
+
+	ega_drm_metadata drm_meta = {0};
+	/**
+	 * Force the cursor height to 64px for now, since we'll want to use the smallest size available,
+	 * as this saves power on Intel platforms.
+	 */
+	drm_meta->max_cursor_height = 64;
+	drm_meta->max_cursor_width = 64;
+	drm_meta->scrn = scrn;
+
+	/* Setup screen logic and init the FB. */
+	if (ega->blitter_available || ega->native_xvmc_available)
+	{
+		ega_load_helpers(screen);
+	}
+	else
+	{
+		xf86DrvMsg(scrn->scrnIndex, X_INFO, "[EGA] No blitter or XvMC available, using pure GLAMOR.\n");
+		if (!ega_load_pure(screen, drm_meta))
+		{
+			xf86DrvMsg(scrn->scrnIndex, X_ERROR, "ega_load_pure() returned FALSE.\n");
+			return FALSE;
+		}
+	}
+
+	/* Setup GLAMOR now that we have a FB to render to. */
 	int flags = GLAMOR_USE_EGL_SCREEN | GLAMOR_USE_SCREEN | GLAMOR_USE_PICTURE_SCREEN | GLAMOR_INVERTED_Y_AXIS;
 	int dri_level = intel_option_cast_to_unsigned(ega->Options, OPTION_DRI, DEFAULT_DRI_LEVEL);
 
@@ -136,15 +189,25 @@ Bool ega_init_screen(ScreenPtr screen, int argc, char **argv)
 		return FALSE;
 	}
 
-#ifdef ENABLE_BROKEN_EGA
-	Bool use_hardware_xvmc = ega->info->gen < 0120;
-#else
-	Bool use_hardware_xvmc = FALSE;
-#endif
+	/* Finish up setting up the screen. */
+	xf86SetBlackWhitePixels(screen);
 
-	xf86DrvMsg(scrn->scrnIndex, X_INFO, "Using hardware offloading for XvMC? %s", (use_hardware_xvmc ? "YES" : "NO"));
+    xf86SetBackingStore(screen);
+    xf86SetSilkenMouse(screen);
+    miDCInitialize(screen, xf86GetPointerScreenFuncs());
 
-	if (use_hardware_xvmc)
+	xf86_cursors_init(screen, drm_meta->max_cursor_width, drm_meta->max_cursor_height,
+			HARDWARE_CURSOR_SOURCE_MASK_INTERLEAVE_64 |
+			HARDWARE_CURSOR_UPDATE_UNHIDDEN |
+			HARDWARE_CURSOR_ARGB);
+
+	/* Must be called before EnterVT() */
+	scrn->vtSema = true;
+
+	/* Setup XvMC/Textured Video right at the end. */
+	xf86DrvMsg(scrn->scrnIndex, X_INFO, "Using hardware offloading for XvMC? %s", (ega->native_xvmc_available ? "YES" : "NO"));
+
+	if (ega->native_xvmc_available)
 	{
 //		intel_video_overlay_setup_image(screen);
 //		ega->native_xvmc_available = 1;
@@ -158,23 +221,6 @@ Bool ega_init_screen(ScreenPtr screen, int argc, char **argv)
 			xf86DrvMsg(scrn->scrnIndex, X_ERROR, "Failed to initialize textured pixmap of screen for GLAMOR.\n");
 			return FALSE;
 		}
-	}
-
-#ifdef ENABLE_BROKEN_EGA
-	/* Allow BLT on pre-Gen 11 graphics. */
-	ega->blitter_available = ega->info->gen < 0120;
-#else
-	ega->blitter_available = 0;
-#endif
-
-
-	if (ega->blitter_available || ega->native_xvmc_available)
-	{
-		ega_load_helpers(screen);
-	}
-	else
-	{
-		xf86DrvMsg(scrn->scrnIndex, X_INFO, "[EGA] No blitter or XvMC available, using pure GLAMOR.\n");
 	}
 
 	xf86DrvMsg(scrn->scrnIndex, X_INFO, "Using EGA.\n");

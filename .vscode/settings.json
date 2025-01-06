@@ -7,6 +7,7 @@
 		"stdio.h": "c",
 		"ega_cpu_arch.h": "c",
 		"stdbool.h": "c",
-		"ega_helpers.h": "c"
+		"ega_helpers.h": "c",
+		"format": "c"
 	}
 }
