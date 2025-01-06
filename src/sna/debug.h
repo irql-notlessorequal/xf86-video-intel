@@ -28,14 +28,14 @@
 #ifndef _SNA_DEBUG_H_
 #define _SNA_DEBUG_H_
 
-#if HAS_DEBUG_FULL
+#if defined(HAS_DEBUG_FULL) || defined(HAS_DEBUG_LOGGING)
 void LogF(const char *f, ...);
 #define DBG(x) LogF x
 #else
 #define DBG(x) do {} while (0)
 #endif
 
-#if HAS_DEBUG_FULL || !defined(NDEBUG)
+#if defined(HAS_DEBUG_FULL) || defined(HAS_DEBUG_LOGGING) || !defined(NDEBUG)
 #define ERR(x) ErrorF x
 #else
 #define ERR(x) do {} while (0)

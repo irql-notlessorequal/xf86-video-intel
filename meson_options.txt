@@ -36,7 +36,7 @@ option('use-create2', type : 'boolean', value : false,
        description : 'Enable use of create2 ioctl (experimental)')
 option('async-swap', type : 'boolean', value : false,
        description : 'Enable use of asynchronous swaps (experimental)')
-option('internal-debug', type : 'combo', value : 'no', choices : [ 'no', 'sync', 'memory', 'pixmap', 'full' ],
+option('internal-debug', type : 'combo', value : 'no', choices : [ 'no', 'sync', 'memory', 'pixmap', 'logging', 'full' ],
        description : 'Enable internal debugging')
 option('xorg-module-dir', type : 'string', value : '@libdir@/xorg/modules',
        description : 'Default xorg module directory')

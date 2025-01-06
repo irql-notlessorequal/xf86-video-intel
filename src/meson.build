@@ -78,6 +78,9 @@ endif
 if debug == 'pixmap' or debug == 'full'
   config.set('DEBUG_PIXMAP', 1)
 endif
+if debug == 'logging'
+  config.set('HAS_DEBUG_LOGGING', 1)
+endif
 if debug == 'full'
   config.set('HAS_DEBUG_FULL', 1)
 endif

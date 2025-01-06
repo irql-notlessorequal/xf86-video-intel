@@ -813,6 +813,10 @@ if test "x$DEBUG" = "xpixmap"; then
 	AC_DEFINE(DEBUG_PIXMAP,1,[Enable pixmap debugging])
 	debug_msg="$debug_msg pixmaps"
 fi
+if test "x$DEBUG" = "xlogging"; then
+	AC_DEFINE(HAS_DEBUG_LOGGING,1,[Enable debug logging])
+	debug_msg="$debug_msg logging"
+fi
 if test "x$DEBUG" = "xfull"; then
 	AC_DEFINE(DEBUG_MEMORY,1,[Enable memory debugging])
 	AC_DEFINE(DEBUG_PIXMAP,1,[Enable pixmap debugging])
