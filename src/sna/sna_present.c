@@ -648,7 +648,7 @@ static Bool sna_present_check_flip2(RRCrtcPtr crtc, WindowPtr window, PixmapPtr 
 		assert(flip->gpu_bo);
 		if (sna->flags & SNA_LINEAR_FB) {
 			if (flip->gpu_bo->tiling != I915_TILING_NONE) {
-				DBG(("%s: pined bo, tilng=%d needs NONE\n",
+				DBG(("%s: pinned bo, tiling=%d needs NONE\n",
 				     __FUNCTION__, flip->gpu_bo->tiling));
 				*reason = PRESENT_FLIP_REASON_BUFFER_FORMAT;
 				return FALSE;
@@ -656,7 +656,7 @@ static Bool sna_present_check_flip2(RRCrtcPtr crtc, WindowPtr window, PixmapPtr 
 		} else {
 			if (!sna->kgem.can_scanout_y &&
 			    flip->gpu_bo->tiling == I915_TILING_Y) {
-				DBG(("%s: pinned bo, tilng=%d and can't scanout Y\n",
+				DBG(("%s: pinned bo, tiling=%d and can't scanout Y\n",
 				     __FUNCTION__, flip->gpu_bo->tiling));
 				*reason = PRESENT_FLIP_REASON_BUFFER_FORMAT;
 				return FALSE;
