@@ -918,6 +918,43 @@ char *intel_str_replace(char *orig, char *rep, char *with) {
 }
 
 #ifdef __linux__
+int __get_render_node_count()
+{
+	DIR *d;
+	struct dirent *dir;
+	d = opendir("/dev/dri/by-path/");
+
+	if (!d) {
+		xf86Msg(X_ERROR, "[intel::__get_render_node_count] Failed to open /dev/dri/by-path!\n");
+		return 0;
+	}
+
+	int count = 0;
+	while ((dir = readdir(d)) != NULL)
+	{
+		/* We need card nodes. Only allow them. */
+		if (strstr(dir->d_name, "-card") == NULL)
+			continue;
+
+		char curr_path[PATH_MAX] = {0};
+		strcat(curr_path, "/dev/dri/by-path/");
+		strcat(curr_path, dir->d_name);
+
+		char true_path[PATH_MAX];
+		if (!realpath(curr_path, true_path))
+		{
+			xf86Msg(X_ERROR, "[intel::__get_render_node_count] realpath(%s) returned an error.\n", curr_path);
+			continue;
+		}
+
+		/* Increment the counter. */
+		count++;
+	}
+
+	closedir(d);
+	return count;
+}
+
 int __get_correct_render_node(struct intel_device *dev)
 {
 	DIR *d;
@@ -992,6 +1029,11 @@ int __get_correct_render_node(struct intel_device *dev)
 	return 1;
 }
 #else
+int __get_render_node_count()
+{
+	return 1;
+}
+
 int __get_correct_render_node(struct intel_device *dev)
 {
 	/* Unsupported environment, surely nothing will go wrong... */
@@ -1030,10 +1072,33 @@ int __requires_nvidia_drm_workaround(struct intel_device *dev)
 		return 0;
 	}
 
-	/* Check if the root driver name is "nvidia-drm" */
-	drmVersionPtr version = drmGetVersion(fd_root);
+	/**
+	 * Previously we checked if 'fd_root' was nvidia-drm, while this tends to work,
+	 * if we insert a third GPU, everything goes wrong. Oops.
+	 * 
+	 * Check how many GPUs we have present and then make a dumb choice.
+	 */
+	int gpu_count = __get_render_node_count();
 
-	close(fd_curr);
-	close(fd_root);
-	return strcmp(version->name, "nvidia-drm") == 0;
+	if (gpu_count <= 1)
+	{
+		/* Something went wrong, bail out. */
+		return false;
+	}
+	else if (gpu_count == 2)
+	{
+		drmVersionPtr version = drmGetVersion(fd_root);
+
+		close(fd_curr);
+		close(fd_root);
+		return strcmp(version->name, "nvidia-drm") == 0;
+	}
+	else
+	{
+		/* We likely need to use the workaround, no I can't bothered to iterate and check. */
+
+		close(fd_curr);
+		close(fd_root);
+		return true;
+	}
 }
