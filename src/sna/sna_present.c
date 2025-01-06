@@ -132,7 +132,17 @@ static uint64_t gettime_ust64(void)
 {
 	struct timespec tv;
 
+	/**
+	 * modesetting uses coarse timing to reduce overhead, do that here too.
+	 */
+
+#ifdef __linux__
+	if (clock_gettime(CLOCK_MONOTONIC_COARSE, &tv))
+#elif __FreeBSD__
+	if (clock_gettime(CLOCK_MONOTONIC_FAST, &tv))
+#else
 	if (clock_gettime(CLOCK_MONOTONIC, &tv))
+#endif
 		return GetTimeInMicros();
 
 	return ust64(tv.tv_sec, tv.tv_nsec / 1000);
