@@ -137,9 +137,9 @@ Bool ega_init_screen(ScreenPtr screen, int argc, char **argv)
 #endif
 
 	scrn->pScreen = screen;
-	if (!SetMaster(scrn))
+	if (!intel_put_master(ega->dev))
 	{
-		xf86DrvMsg(scrn->scrnIndex, X_ERROR, "SetMaster() returned FALSE.\n");
+		xf86DrvMsg(scrn->scrnIndex, X_ERROR, "intel_put_master() returned FALSE.\n");
 		return FALSE;
 	}
 
@@ -174,7 +174,7 @@ Bool ega_init_screen(ScreenPtr screen, int argc, char **argv)
 	if (dri_level <= 1)
 	{
 		xf86DrvMsg(scrn->scrnIndex, X_ERROR,
-			   "EGA does not support DRI 1, this is likely a configuration error.\n");
+				"EGA does not support DRI 1, this is likely a configuration error.\n");
 		return FALSE;
 	}
 	else if (dri_level == 2)
