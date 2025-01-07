@@ -113,7 +113,7 @@ if with_sna
   subdir('sna')
   intel_drv_libs += sna
 elif default_accel == 'sna'
-  error('SNA not available, so can\'t selected as the default acceleration method')
+  error('SNA not available, so can\'t be selected as the default acceleration method')
 endif
 
 with_uxa = get_option('uxa')
@@ -121,13 +121,23 @@ if with_uxa
   subdir('uxa')
   intel_drv_libs += uxa
 elif default_accel == 'uxa'
-  error('UXA not available, so can\'t selected as the default acceleration method')
+  error('UXA not available, so can\'t be selected as the default acceleration method')
+endif
+
+with_ega = get_option('ega')
+if with_ega
+  subdir('ega')
+  intel_drv_libs += ega
+elif default_accel == 'ega'
+  error('EGA not available, so can\'t be selected as the default acceleration method')
 endif
 
 if default_accel == 'sna'
   config.set('DEFAULT_ACCEL_METHOD', 'SNA')
 elif default_accel == 'uxa'
   config.set('DEFAULT_ACCEL_METHOD', 'UXA')
+elif default_accel == 'ega'
+  config.set('DEFAULT_ACCEL_METHOD', 'EGA')
 else
   config.set('DEFAULT_ACCEL_METHOD', 'NOACCEL')
 endif

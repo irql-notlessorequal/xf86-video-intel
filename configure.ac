@@ -421,14 +421,14 @@ fi
 
 AC_ARG_ENABLE(ega,
 	      AS_HELP_STRING([--enable-ega],
-			     [Enable Everything Graphically Accelerated (EGA) [default=auto]]),
+			     [Enable Everything Graphically Accelerated (EGA) [default=no]]),
 	      [EGA="$enableval"],
-	      [EGA=auto])
+	      [EGA=no])
 
 if test "x$EGA" != "xno"; then
 	AC_DEFINE(USE_EGA, 1, [Enable EGA support])
 	required_pixman_version=0.24
-	RGA=yes
+	EGA=yes
 fi
 
 PKG_CHECK_MODULES(XORG, [xorg-server >= $required_xorg_server_version xproto fontsproto damageproto pixman-1 >= $required_pixman_version $REQUIRED_MODULES])
