@@ -7296,6 +7296,11 @@ retry_flip:
 				arg.flags ^= DRM_MODE_PAGE_FLIP_ASYNC;
 				async = false;
 
+				/**
+				 * Avoid synchronizing to vblank since we're about to do this anyways...
+				 */
+				sna->page_flip_workaround_active = true;
+
 				goto retry_flip;
 			}
 
@@ -7361,6 +7366,12 @@ next_crtc:
 		count++;
 	}
 	sigio_unblock(sigio);
+
+	/* We've had a successful pageflip, return to previous behaviour. */
+	if (sna->page_flip_workaround_active)
+	{
+		sna->page_flip_workaround_active = false;
+	}
 
 	DBG(("%s: page flipped %d crtcs\n", __FUNCTION__, count));
 	return count;
@@ -8594,6 +8605,9 @@ sna_wait_for_scanline(struct sna *sna,
 	assert(pixmap == sna->front);
 
 	if (sna->flags & SNA_NO_VSYNC)
+		return false;
+
+	if (sna->page_flip_workaround_active)
 		return false;
 
 	/*
