@@ -786,7 +786,7 @@ flip(struct sna *sna,
 }
 
 static struct kgem_bo *
-get_flip_bo(PixmapPtr pixmap)
+get_flip_bo(PixmapPtr pixmap, bool async_flip)
 {
 	struct sna *sna = to_sna_from_pixmap(pixmap);
 	struct sna_pixmap *priv;
@@ -854,6 +854,27 @@ get_flip_bo(PixmapPtr pixmap)
 		return NULL;
 	}
 
+	/*
+	 * Intel introduced asynchronous page-flipping support into the kernel in late 2022.
+	 * This is only useful if you are dealing with Intel hardware only [1] or have
+	 * a Gen 12+ iGPU, which obviously isn't supported with SNA/UXA.
+	 * 
+	 * Sadly, on legacy hardware using the LINEAR modifier for direct PRIME scanout isn't
+	 * supported and the kernel will yell at us with a EINVAL. 
+	 * 
+	 * [1] Intel modifiers vary between generations but most support X and Y tiling, so we can just reuse them,
+	 * otherwise we suffer with LINEAR.
+	 */
+	if (async_flip && priv->gpu_bo->tiling == I915_TILING_NONE)
+	{
+		/**
+		 * TODO(irql): Figure out if it's possible to convert over to TILING_X or TILING_Y by calling sna_pixmap_change_tiling.
+		 * Currently calling it will simply error out.
+		 */
+		DBG(("%s: cannot scanout LINEAR via hardware, forcing BLT+SCANOUT.\n", __FUNCTION__));
+		return NULL;
+	}
+
 	return priv->gpu_bo;
 }
 
@@ -900,7 +921,7 @@ sna_present_flip(RRCrtcPtr crtc,
 			return FALSE;
 	}
 
-	bo = get_flip_bo(pixmap);
+	bo = get_flip_bo(pixmap, !sync_flip);
 	if (bo == NULL) {
 		DBG(("%s: flip invalid bo\n", __FUNCTION__));
 		return FALSE;
@@ -941,7 +962,7 @@ notify:
 		return;
 	}
 
-	bo = get_flip_bo(screen->GetScreenPixmap(screen));
+	bo = get_flip_bo(screen->GetScreenPixmap(screen), false);
 
 	/* Are we unflipping after a failure that left our ScreenP in place? */
 	if (!sna_needs_page_flip(sna, bo))

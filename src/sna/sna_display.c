@@ -7222,6 +7222,7 @@ sna_page_flip(struct sna *sna,
 
 		arg.crtc_id = __sna_crtc_id(crtc);
 		arg.fb_id = get_fb(sna, bo, width, height);
+
 		if (arg.fb_id == 0) {
 			assert(count == 0);
 			break;
@@ -7259,8 +7260,9 @@ update_scanout:
 					goto next_crtc;
 
 				/* queue a flip in order to send the event */
-			} else
+			} else {
 				goto error;
+			}
 		}
 
 		/* Only the reference crtc will finally deliver its page flip
@@ -7276,34 +7278,6 @@ retry_flip:
 		DBG(("%s: crtc %d id=%d, pipe=%d  --> fb %d\n",
 		     __FUNCTION__, i, __sna_crtc_id(crtc), __sna_crtc_pipe(crtc), arg.fb_id));
 		if (drmIoctl(sna->kgem.fd, DRM_IOCTL_MODE_PAGE_FLIP, &arg)) {
-			/*
-			 * Intel introduced asynchronous page-flipping support into the kernel in late 2022.
-			 * This is only useful if you are dealing with Intel hardware only [1] or have
-			 * a Gen 12+ iGPU, which obviously isn't supported with SNA/UXA.
-			 * 
-			 * Sadly, on legacy hardware using the LINEAR modifier for direct PRIME scanout isn't
-			 * supported and the kernel will yell at us with a EINVAL. 
-			 *
-			 * Try once more (synchronously) to workaround potential hangs that otherwise occur.
-			 *
-			 * Avoid printing to Xorg log as this will happen often.
-			 * 
-			 * [1] Intel modifiers vary between generations but most support X and Y tiling, so we can just reuse them,
-			 * otherwise we suffer with LINEAR.
-			 */
-			if (errno == EINVAL && async) {
-				DBG(("%s: pageflip failed with err=%d, attempting a synchronous fallback...\n", __FUNCTION__, errno));
-				arg.flags ^= DRM_MODE_PAGE_FLIP_ASYNC;
-				async = false;
-
-				/**
-				 * Avoid synchronizing to vblank since we're about to do this anyways...
-				 */
-				sna->page_flip_workaround_active = true;
-
-				goto retry_flip;
-			}
-
 			ERR(("%s: pageflip failed with err=%d async=%d\n", __FUNCTION__, errno, async));
 
 			if (errno == EBUSY) {
@@ -7366,12 +7340,6 @@ next_crtc:
 		count++;
 	}
 	sigio_unblock(sigio);
-
-	/* We've had a successful pageflip, return to previous behaviour. */
-	if (sna->page_flip_workaround_active)
-	{
-		sna->page_flip_workaround_active = false;
-	}
 
 	DBG(("%s: page flipped %d crtcs\n", __FUNCTION__, count));
 	return count;
@@ -8605,9 +8573,6 @@ sna_wait_for_scanline(struct sna *sna,
 	assert(pixmap == sna->front);
 
 	if (sna->flags & SNA_NO_VSYNC)
-		return false;
-
-	if (sna->page_flip_workaround_active)
 		return false;
 
 	/*

@@ -2552,6 +2552,7 @@ sna_blt_composite(struct sna *sna,
 #if DEBUG_NO_BLT || NO_BLT_COMPOSITE
 	return false;
 #endif
+
 	DBG(("%s (%d, %d), (%d, %d), %dx%d\n",
 	     __FUNCTION__, x, y, dst_x, dst_y, width, height));
 

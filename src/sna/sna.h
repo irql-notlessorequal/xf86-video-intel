@@ -295,8 +295,6 @@ struct sna {
 	bool enable_async_swap : 1;
 	/* Enables an optimization that probably doesn't even work at all still. */
 	bool enable_reduced_flushing : 1;
-	/* Used to defer waiting for scanline during an already synchronous pageflip. */
-	bool page_flip_workaround_active : 1;
 
 	unsigned watch_shm_flush;
 	unsigned watch_dri_flush;
