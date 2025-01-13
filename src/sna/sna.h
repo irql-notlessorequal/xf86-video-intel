@@ -1387,7 +1387,7 @@ void sna_image_composite(pixman_op_t        op,
 			 uint16_t           width,
 			 uint16_t           height);
 
-extern jmp_buf sigjmp[4];
+extern sigjmp_buf sigjmp[4];
 extern volatile sig_atomic_t sigtrap;
 
 #define sigtrap_assert_inactive() assert(sigtrap == 0)

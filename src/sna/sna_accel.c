@@ -61,6 +61,7 @@
 #include <valgrind.h>
 #include <memcheck.h>
 #endif
+#include <setjmp.h>
 
 #define FAULT_INJECTION 0
 
@@ -437,7 +438,7 @@ static void assert_pixmap_damage(PixmapPtr p)
 #endif
 #endif
 
-jmp_buf sigjmp[4];
+sigjmp_buf sigjmp[4];
 volatile sig_atomic_t sigtrap;
 
 static int sigtrap_handler(int sig)
