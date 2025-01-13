@@ -10,6 +10,7 @@
 		"ega_helpers.h": "c",
 		"format": "c",
 		"ranges": "c",
-		"valarray": "c"
+		"valarray": "c",
+		"__locale": "c"
 	}
 }

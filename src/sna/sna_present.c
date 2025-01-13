@@ -678,6 +678,24 @@ static Bool sna_present_check_flip2(RRCrtcPtr crtc, WindowPtr window, PixmapPtr 
 			     __FUNCTION__, flip->gpu_bo->pitch));
 			return FALSE;
 		}
+
+		/**
+		 * Intel introduced asynchronous page-flipping support into the kernel in late 2022.
+		 * This is only useful if you are dealing with Intel hardware only [1] or have
+		 * a Gen 12+ iGPU, which obviously isn't supported with SNA/UXA.
+		 * 
+		 * Sadly, on legacy hardware using the LINEAR modifier for direct PRIME scanout isn't
+		 * supported and the kernel will yell at us with a EINVAL. 
+		 * 
+		 * [1] Intel modifiers vary between generations but most support X and Y tiling, so we can just reuse them,
+		 * otherwise we suffer with LINEAR.
+		 */
+		if (!sync_flip && flip->gpu_bo->tiling == I915_TILING_NONE)
+		{
+			DBG(("%s: pinned bo, cannot scanout LINEAR via hardware.\n", __FUNCTION__));
+			*reason = PRESENT_FLIP_REASON_BUFFER_FORMAT;
+			return FALSE;
+		}
 	}
 
 	return TRUE;
@@ -851,27 +869,6 @@ get_flip_bo(PixmapPtr pixmap, bool async_flip)
 
 	if (priv->gpu_bo->pitch & 63) {
 		DBG(("%s: invalid pitch, no conversion\n", __FUNCTION__));
-		return NULL;
-	}
-
-	/*
-	 * Intel introduced asynchronous page-flipping support into the kernel in late 2022.
-	 * This is only useful if you are dealing with Intel hardware only [1] or have
-	 * a Gen 12+ iGPU, which obviously isn't supported with SNA/UXA.
-	 * 
-	 * Sadly, on legacy hardware using the LINEAR modifier for direct PRIME scanout isn't
-	 * supported and the kernel will yell at us with a EINVAL. 
-	 * 
-	 * [1] Intel modifiers vary between generations but most support X and Y tiling, so we can just reuse them,
-	 * otherwise we suffer with LINEAR.
-	 */
-	if (async_flip && priv->gpu_bo->tiling == I915_TILING_NONE)
-	{
-		/**
-		 * TODO(irql): Figure out if it's possible to convert over to TILING_X or TILING_Y by calling sna_pixmap_change_tiling.
-		 * Currently calling it will simply error out.
-		 */
-		DBG(("%s: cannot scanout LINEAR via hardware, forcing BLT+SCANOUT.\n", __FUNCTION__));
 		return NULL;
 	}
 
