@@ -376,13 +376,17 @@ Default: Disabled.
 SNA only.
 .TP
 
-.BI "Option \*qPreferYTiling\*q \*q" boolean \*q
-This option tells SNA to prefer using Y-tiling mode, which is faster than typical X-tiling mode on Intel hardware.
+.BI "Option \*qEnableYTilingScanout\*q \*q" boolean \*q
+This option tells SNA to enable Y-tiling for scanout.
 .br
-Ivy Bridge and newer can use this feature typically without issues, with Skylake being able to directly scan-out Y-tiles.
+Highly experimental! 
+.B Works only on Skylake and newer.
+
+.br
+Known to break on NVIDIA Optimus/PRIME setups.
 
 .IP
-Default: Enabled on qualifying hardware.
+Default: Disabled.
 .br
 SNA only.
 .TP

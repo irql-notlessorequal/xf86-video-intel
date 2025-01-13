@@ -47,7 +47,6 @@ documentation can be read with the following command:
 4. Experimental Y-tiling preference. (in theory better performance, not validated)
 5. Implementation of `CreateBuffer2`, `DestroyBuffer2` and `CopyRegion2` within SNA and UXA.
 6. Improved performance with the BLT (blitter) engine on Gen 7.x (Ivy Bridge/Haswell) era hardware when mitigations are disabled.
-7. Experimental Y-tiling scanout preference on Skylake and newer.
 
 ## Known issues.
 
