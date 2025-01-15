@@ -26,6 +26,10 @@
 #include "intel_video.h"
 #include "uxa.h"
 
+#if !defined(uxaDestroyPixmap)
+#define uxaDestroyPixmap(value) dixDestroyPixmap(value, 0)
+#endif
+
 struct intel_uxa_pixmap {
 	dri_bo *bo;
 

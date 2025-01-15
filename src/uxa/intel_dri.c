@@ -210,7 +210,7 @@ I830DRI2CreateBuffers(DrawablePtr drawable, unsigned int *attachments,
 			    intel_get_pixmap_bo(pixmap) == NULL)
 			{
 				if (pixmap)
-					screen->DestroyPixmap(pixmap);
+					uxaDestroyPixmap(pixmap);
 				goto unwind;
 			}
 		}
@@ -228,7 +228,7 @@ I830DRI2CreateBuffers(DrawablePtr drawable, unsigned int *attachments,
 
 		if ((buffers[i].name = pixmap_flink(pixmap)) == 0) {
 			/* failed to name buffer */
-			screen->DestroyPixmap(pixmap);
+			uxaDestroyPixmap(pixmap);
 			goto unwind;
 		}
 	}
@@ -237,7 +237,7 @@ I830DRI2CreateBuffers(DrawablePtr drawable, unsigned int *attachments,
 
 unwind:
 	while (i--)
-		screen->DestroyPixmap(privates[i].pixmap);
+		uxaDestroyPixmap(privates[i].pixmap);
 	free(privates);
 	free(buffers);
 	return NULL;
@@ -252,7 +252,7 @@ I830DRI2DestroyBuffers(DrawablePtr drawable, DRI2BufferPtr buffers, int count)
 
 	for (i = 0; i < count; i++) {
 		private = buffers[i].driverPrivate;
-		screen->DestroyPixmap(private->pixmap);
+		uxaDestroyPixmap(private->pixmap);
 	}
 
 	if (buffers) {
@@ -352,7 +352,7 @@ I830DRI2CreateBuffer2(ScreenPtr screen, DrawablePtr drawable,
 					      hint);
 		if (pixmap == NULL || intel_get_pixmap_bo(pixmap) == NULL) {
 			if (pixmap)
-				screen->DestroyPixmap(pixmap);
+				uxaDestroyPixmap(pixmap);
 			free(privates);
 			free(buffer);
 			return NULL;
@@ -370,7 +370,7 @@ I830DRI2CreateBuffer2(ScreenPtr screen, DrawablePtr drawable,
 
 	if ((buffer->name = pixmap_flink(pixmap)) == 0) {
 		/* failed to name buffer */
-		screen->DestroyPixmap(pixmap);
+		uxaDestroyPixmap(pixmap);
 		free(privates);
 		free(buffer);
 		return NULL;
@@ -393,7 +393,7 @@ static void I830DRI2DestroyBuffer2(ScreenPtr unused, DrawablePtr draw, DRI2Buffe
 		I830DRI2BufferPrivatePtr private = buffer->driverPrivate;
 		if (--private->refcnt == 0) {
 			ScreenPtr screen = private->pixmap->drawable.pScreen;
-			screen->DestroyPixmap(private->pixmap);
+			uxaDestroyPixmap(private->pixmap);
 
 			free(private);
 			free(buffer);

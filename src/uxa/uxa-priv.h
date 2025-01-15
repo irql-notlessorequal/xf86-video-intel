@@ -80,6 +80,8 @@
 #define DEBUG_OFFSCREEN		0
 #define DEBUG_GLYPH_CACHE	0
 
+#define uxaDestroyPixmap(value) dixDestroyPixmap(value, 0)
+
 #define UXA_FALLBACK(x)     					\
 if (uxa_get_screen(screen)->fallback_debug) {			\
 	ErrorF("UXA fallback at %s: ", __FUNCTION__);		\

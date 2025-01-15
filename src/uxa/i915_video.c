@@ -79,7 +79,7 @@ I915DisplayVideoTextured(ScrnInfoPtr scrn,
 			return;
 
 		if (intel_uxa_get_pixmap_bo(target) == NULL) {
-			screen->DestroyPixmap(target);
+			uxaDestroyPixmap(target);
 			return;
 		}
 
@@ -485,7 +485,7 @@ I915DisplayVideoTextured(ScrnInfoPtr scrn,
 			FreeScratchGC(gc);
 		}
 
-		target->drawable.pScreen->DestroyPixmap(target);
+		uxaDestroyPixmap(target);
 	}
 
 	intel_uxa_debug_flush(scrn);
