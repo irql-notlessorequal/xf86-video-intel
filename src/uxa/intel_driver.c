@@ -641,10 +641,10 @@ redisplay_dirty(ScreenPtr screen, PixmapDirtyUpdatePtr dirty)
         intel_flush(intel);
 	if (!intel->has_prime_vmap_flush) {
 		drm_intel_bo *bo = intel_uxa_get_pixmap_bo(PixmapDirtyPrimary(dirty));
-		was_blocked = xf86BlockSIGIO();
+		input_lock();
 		drm_intel_bo_map(bo, FALSE);
 		drm_intel_bo_unmap(bo);
-		xf86UnblockSIGIO(was_blocked);
+		input_unlock();
 	}
 
 	DamageRegionProcessPending(&PixmapDirtyDst(dirty)->drawable);

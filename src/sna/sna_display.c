@@ -1156,11 +1156,12 @@ static inline void sigio_unblock(int was_blocked)
 #include <xf86_OSproc.h>
 static inline int sigio_block(void)
 {
-	return xf86BlockSIGIO();
+	input_lock();
+	return 0;
 }
 static inline void sigio_unblock(int was_blocked)
 {
-	xf86UnblockSIGIO(was_blocked);
+	input_unlock();
 }
 #endif
 
