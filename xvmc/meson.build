@@ -14,6 +14,7 @@ shared_library('IntelXvMC',
 	       dependencies : [
 		 dependency('threads', required : true),
 		 dependency('x11', required : true),
+		 dependency('xv', required : true),
 		 dependency('xvmc', required : true),
 		 dependency('xorg-server', required : true),
 		 dependency('x11-xcb', required : true),
