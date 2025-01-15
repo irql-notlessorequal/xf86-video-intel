@@ -69,6 +69,11 @@
 #include <fcntl.h>
 #include <assert.h>
 
+// for FreeBSD
+#ifndef ETIME
+#define ETIME ETIMEDOUT
+#endif
+
 #define FORCE_FULL_REDRAW 0
 #define FORCE_16BIT_XFER 0
 
