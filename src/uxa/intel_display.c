@@ -393,9 +393,6 @@ intel_crtc_apply(xf86CrtcPtr crtc)
 		}
 	}
 
-	if (scrn->pScreen)
-		xf86_reload_cursors(scrn->pScreen);
-
 done:
 	free(output_ids);
 	return ret;
