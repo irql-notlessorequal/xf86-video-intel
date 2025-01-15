@@ -14452,7 +14452,7 @@ static void
 sna_poly_fill_rect_stippled_n_box__imm(struct sna *sna,
 				       struct kgem_bo *bo,
 				       uint32_t br00, uint32_t br13,
-				       const GC *gc,
+				       const GCPtr gc,
 				       const BoxRec *box,
 				       const DDXPointRec *origin)
 {
@@ -14564,7 +14564,7 @@ sna_poly_fill_rect_stippled_n_box(struct sna *sna,
 				  struct kgem_bo *bo,
 				  struct kgem_bo **tile,
 				  uint32_t br00, uint32_t br13,
-				  const GC *gc,
+				  const GCPtr gc,
 				  const BoxRec *box,
 				  const DDXPointRec *origin)
 {
