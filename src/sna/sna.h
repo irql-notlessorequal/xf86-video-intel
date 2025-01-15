@@ -101,6 +101,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define TEST_KGEM (TEST_ALL || 0)
 #define TEST_RENDER (TEST_ALL || 0)
 
+#define snaDestroyPixmap(value) dixDestroyPixmap(value, 0)
+
 #include "intel_driver.h"
 #include "intel_list.h"
 #include "kgem.h"

@@ -215,7 +215,7 @@ sna_mode_resize(ScrnInfoPtr scrn, int width, int height)
 	assert(screen->GetScreenPixmap(screen) == new_front);
 	assert(to_sna_from_screen(screen)->front == new_front);
 
-	screen->DestroyPixmap(new_front);
+	snaDestroyPixmap(new_front);
 
 	return TRUE;
 }

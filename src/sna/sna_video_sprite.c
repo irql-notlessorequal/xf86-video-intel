@@ -666,7 +666,7 @@ off:
 			}
 
 			if (!sna->render.video(sna, video, &frame, &r, scaled)) {
-				screen->DestroyPixmap(scaled);
+				snaDestroyPixmap(scaled);
 				ret = BadAlloc;
 				goto err;
 			}
@@ -685,7 +685,7 @@ off:
 			frame.height = frame.image.y2;
 			frame.pitch[0] = frame.bo->pitch;
 
-			screen->DestroyPixmap(scaled);
+			snaDestroyPixmap(scaled);
 			cache_bo = false;
 		}
 

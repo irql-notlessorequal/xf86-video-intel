@@ -986,7 +986,7 @@ fallback:
 
 		if (!screen->ModifyPixmapHeader(pixmap, width, height, depth,
 						bpp, pitch, addr)) {
-			screen->DestroyPixmap(pixmap);
+			snaDestroyPixmap(pixmap);
 			return NULL;
 		}
 
@@ -7023,10 +7023,10 @@ discard_cow:
 						    box, n, 0)) {
 				DBG(("%s: fallback - accelerated copy boxes failed\n",
 				     __FUNCTION__));
-				tmp->drawable.pScreen->DestroyPixmap(tmp);
+				snaDestroyPixmap(tmp);
 				goto fallback;
 			}
-			tmp->drawable.pScreen->DestroyPixmap(tmp);
+			snaDestroyPixmap(tmp);
 
 			if (damage)
 				sna_damage_add_to_pixmap(damage, region, dst_pixmap);
@@ -18185,7 +18185,7 @@ sna_set_screen_pixmap(PixmapPtr pixmap)
 	pixmap->refcnt++;
 
 	if (old_front)
-		screen->DestroyPixmap(old_front);
+		snaDestroyPixmap(old_front);
 }
 
 static Bool

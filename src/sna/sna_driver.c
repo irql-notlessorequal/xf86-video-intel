@@ -266,7 +266,7 @@ static Bool sna_create_screen_resources(ScreenPtr screen)
 	screen->SetScreenPixmap(new_front);
 	assert(screen->GetScreenPixmap(screen) == new_front);
 	assert(sna->front == new_front);
-	screen->DestroyPixmap(new_front); /* transfer ownership to screen */
+	snaDestroyPixmap(new_front); /* transfer ownership to screen */
 
 	sna_mode_set_primary(sna);
 
@@ -1016,7 +1016,7 @@ static Bool sna_early_close_screen(CLOSE_SCREEN_ARGS_DECL)
 	}
 
 	if (sna->front) {
-		screen->DestroyPixmap(sna->front);
+		snaDestroyPixmap(sna->front);
 		sna->front = NULL;
 	}
 

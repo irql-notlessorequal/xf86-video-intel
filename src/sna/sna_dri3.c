@@ -293,7 +293,7 @@ static PixmapPtr sna_dri3_pixmap_from_fd(ScreenPtr screen,
 	return pixmap;
 
 free_pixmap:
-	screen->DestroyPixmap(pixmap);
+	snaDestroyPixmap(pixmap);
 free_bo:
 	kgem_bo_destroy(&sna->kgem, bo);
 	return NULL;

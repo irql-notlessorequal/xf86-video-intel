@@ -932,7 +932,7 @@ static void _sna_dri2_destroy_buffer(struct sna *sna,
 		sna_watch_flush(sna, -1);
 
 		sna_pixmap_set_buffer(pixmap, NULL);
-		pixmap->drawable.pScreen->DestroyPixmap(pixmap);
+		snaDestroyPixmap(pixmap);
 	}
 
 	sna_dri2_cache_bo(sna, draw,

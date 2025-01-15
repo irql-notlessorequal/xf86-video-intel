@@ -875,7 +875,7 @@ cleanup_src:
 cleanup_dst:
 	FreePicture(tmp_dst, 0);
 cleanup_tmp:
-	screen->DestroyPixmap(tmp);
+	snaDestroyPixmap(tmp);
 	return ret;
 }
 
@@ -1348,7 +1348,7 @@ sna_render_picture_convolve(struct sna *sna,
 		tmp = CreatePicture(0, &pixmap->drawable,
 				PictureMatchFormat(screen, depth, channel->pict_format),
 				0, NULL, serverClient, &error);
-	screen->DestroyPixmap(pixmap);
+	snaDestroyPixmap(pixmap);
 	if (tmp == NULL)
 		return -1;
 
@@ -1429,7 +1429,7 @@ sna_render_picture_flatten(struct sna *sna,
 	tmp = CreatePicture(0, &pixmap->drawable,
 			    PictureMatchFormat(screen, 32, PICT_a8r8g8b8),
 			    0, NULL, serverClient, &error);
-	screen->DestroyPixmap(pixmap);
+	snaDestroyPixmap(pixmap);
 	if (tmp == NULL)
 		return false;
 
@@ -1811,7 +1811,7 @@ sna_render_picture_convert(struct sna *sna,
 						       channel->pict_format),
 				    0, NULL, serverClient, &error);
 		if (dst == NULL) {
-			screen->DestroyPixmap(tmp);
+			snaDestroyPixmap(tmp);
 			return 0;
 		}
 
@@ -1822,7 +1822,7 @@ sna_render_picture_convert(struct sna *sna,
 				    0, NULL, serverClient, &error);
 		if (src == NULL) {
 			FreePicture(dst, 0);
-			screen->DestroyPixmap(tmp);
+			snaDestroyPixmap(tmp);
 			return 0;
 		}
 
@@ -1839,7 +1839,7 @@ sna_render_picture_convert(struct sna *sna,
 
 		channel->bo = __sna_pixmap_get_bo(tmp);
 		kgem_bo_reference(channel->bo);
-		screen->DestroyPixmap(tmp);
+		snaDestroyPixmap(tmp);
 	} else {
 		pixman_image_t *src, *dst;
 		void *ptr;
@@ -2173,7 +2173,7 @@ copy_overlap(struct sna *sna, uint8_t alu,
 				      draw, bo, dst_dx, dst_dy,
 				      box, n, 0));
 
-	screen->DestroyPixmap(tmp);
+	snaDestroyPixmap(tmp);
 	return ret;
 }
 bool
