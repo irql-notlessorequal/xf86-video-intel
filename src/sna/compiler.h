@@ -43,7 +43,6 @@
 #define flatten __attribute__((flatten))
 #define nonnull __attribute__((nonnull))
 #define page_aligned __attribute__((aligned(4096)))
-#define fastcall __attribute__((regparm(3)))
 #else
 #define likely(expr) (expr)
 #define unlikely(expr) (expr)
@@ -56,11 +55,22 @@
 #define flatten
 #define nonnull
 #define page_aligned
+#endif
+
+#if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__) && defined(__x86_64__)
+#define fastcall __attribute__((vectorcall))
+#elif defined(__clang__) && defined(__OPTIMIZE__) && defined(__x86_64__)
+#define fastcall __attribute__((vectorcall))
+#elif defined(__i386__) && defined(__OPTIMIZE__)
+/**
+ * Restrict to x86-32 only since 64-bit land is different.
+ */
+#define fastcall __attribute__((regparm(3)))
+#else
 #define fastcall
 #endif
 
 /* clang doesn't have an equivalent generalization like GCC has, don't bother tuning for Intel. */
-
 #ifdef HAS_CLANG
 #define sse2 fast __attribute__((target("sse2,fpmath=sse")))
 #define sse4_2 fast __attribute__((target("sse4.2,sse2,fpmath=sse")))
@@ -69,10 +79,10 @@
 #define sse4_2 fast __attribute__((target("sse4.2,sse2,fpmath=sse,tune=intel")))
 #endif
 
-#if HAS_GCC(4, 9) && defined(__OPTIMIZE__)
-#define fast __attribute__((optimize("Ofast"))) __attribute__((optimize("live-range-shrinkage")))
-#elif HAS_GCC(4, 6) && defined(__OPTIMIZE__)
-#define fast __attribute__((optimize("Ofast")))
+#if HAS_GCC(4, 6) && defined(__OPTIMIZE__)
+#define fast __attribute__((optimize("Os")))
+#elif HAS_CLANG && defined(__OPTIMIZE__)
+#define fast __attribute__((optimize("Os")))
 #else
 #define fast
 #endif
