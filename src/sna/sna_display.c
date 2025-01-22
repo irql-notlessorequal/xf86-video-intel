@@ -434,6 +434,11 @@ static inline unsigned __sna_crtc_pipe(struct sna_crtc *crtc)
 	return crtc->public.flags >> 8 & 0xff;
 }
 
+static inline unsigned __sna_crtc_index(struct sna_crtc *crtc)
+{
+	return crtc->public.flags >> 16 & 0xff;
+}
+
 static inline unsigned __sna_crtc_id(struct sna_crtc *crtc)
 {
 	return crtc->id;
@@ -3778,7 +3783,7 @@ sna_crtc_init__cursor(struct sna *sna, struct sna_crtc *crtc)
 }
 
 static bool
-sna_crtc_add(ScrnInfoPtr scrn, unsigned id)
+sna_crtc_add(ScrnInfoPtr scrn, unsigned id, int index)
 {
 	struct sna *sna = to_sna(scrn);
 	xf86CrtcPtr crtc;
@@ -3805,9 +3810,10 @@ sna_crtc_add(ScrnInfoPtr scrn, unsigned id)
 	}
 	assert((unsigned)get_pipe.pipe < 256);
 	sna_crtc->public.flags |= get_pipe.pipe << 8;
+	sna_crtc->public.flags |= index << 16;
 
 	if (is_zaphod(scrn) &&
-	    (get_zaphod_crtcs(sna) & (1 << get_pipe.pipe)) == 0) {
+	    (get_zaphod_crtcs(sna) & (1 << index)) == 0) {
 		free(sna_crtc);
 		return true;
 	}
@@ -7937,7 +7943,7 @@ bool sna_mode_pre_init(ScrnInfoPtr scrn, struct sna *sna)
 		xf86_config->compat_output = 0;
 
 		for (i = 0; i < res->count_crtcs; i++)
-			if (!sna_crtc_add(scrn, res->crtcs[i]))
+			if (!sna_crtc_add(scrn, res->crtcs[i], i))
 				return false;
 
 		sna->mode.num_real_crtc = xf86_config->num_crtc;
