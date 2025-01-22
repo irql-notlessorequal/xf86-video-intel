@@ -94,11 +94,11 @@ static void I830DRI2FrameEventHandler(unsigned int frame,
 static void
 i830_dri2_del_frame_event(DRI2FrameEventPtr info);
 
-static uint32_t pipe_select(int pipe)
+static uint32_t crtc_select(int index)
 {
-	if (pipe > 1)
-		return pipe << DRM_VBLANK_HIGH_CRTC_SHIFT;
-	else if (pipe > 0)
+	if (index > 1)
+		return index << DRM_VBLANK_HIGH_CRTC_SHIFT;
+	else if (index > 0)
 		return DRM_VBLANK_SECONDARY;
 	else
 		return 0;
@@ -915,7 +915,7 @@ queue_flip(struct intel_screen_private *intel,
 		return FALSE;
 
 	if (!intel_do_pageflip(intel, old_back,
-			       intel_crtc_to_pipe(crtc),
+			       intel_crtc_to_index(crtc),
 			       FALSE, info,
 			       I830DRI2FlipComplete, I830DRI2FlipAbort))
 		return FALSE;
@@ -959,7 +959,7 @@ queue_swap(struct intel_screen_private *intel,
 	vbl.request.type =
 		DRM_VBLANK_RELATIVE |
 		DRM_VBLANK_EVENT |
-		pipe_select(intel_crtc_to_pipe(crtc));
+		crtc_select(intel_crtc_to_index(crtc));
 	vbl.request.sequence = 1;
 	vbl.request.signal =
 		intel_drm_queue_alloc(intel->scrn, crtc, info,
@@ -1114,16 +1114,16 @@ I830DRI2ScheduleSwap(ClientPtr client, DrawablePtr draw, DRI2BufferPtr front,
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	drmVBlank vbl;
 	int ret;
-        xf86CrtcPtr crtc = I830DRI2DrawableCrtc(draw);
-        int pipe = crtc ? intel_crtc_to_pipe(crtc) : -1;
-        int flip = 0;
+	xf86CrtcPtr crtc = I830DRI2DrawableCrtc(draw);
+	int index = crtc ? intel_crtc_to_index(crtc) : -1;
+	int flip = 0;
 	DRI2FrameEventPtr swap_info = NULL;
 	uint64_t current_msc, current_ust;
-        uint64_t request_msc;
-        uint32_t seq;
+	uint64_t request_msc;
+	uint32_t seq;
 
 	/* Drawable not displayed... just complete the swap */
-	if (pipe == -1)
+	if (index == -1)
 	    goto blit_fallback;
 
 	swap_info = calloc(1, sizeof(DRI2FrameEventRec));
@@ -1181,7 +1181,7 @@ I830DRI2ScheduleSwap(ClientPtr client, DrawablePtr draw, DRI2BufferPtr front,
 	 */
 	if (divisor == 0 || current_msc < *target_msc) {
 		vbl.request.type =
-			DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | pipe_select(pipe);
+			DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | crtc_select(index);
 
 		/* If non-pageflipping, but blitting/exchanging, we need to use
 		 * DRM_VBLANK_NEXTONMISS to avoid unreliable timestamping later
@@ -1226,7 +1226,7 @@ I830DRI2ScheduleSwap(ClientPtr client, DrawablePtr draw, DRI2BufferPtr front,
 	 * equation.
 	 */
 	vbl.request.type =
-		DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | pipe_select(pipe);
+		DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | crtc_select(index);
 	if (flip == 0)
 		vbl.request.type |= DRM_VBLANK_NEXTONMISS;
 
@@ -1350,13 +1350,13 @@ I830DRI2ScheduleWaitMSC(ClientPtr client, DrawablePtr draw, CARD64 target_msc,
 	DRI2FrameEventPtr wait_info;
 	drmVBlank vbl;
 	int ret;
-        xf86CrtcPtr crtc = I830DRI2DrawableCrtc(draw);
-        int pipe = crtc ? intel_crtc_to_pipe(crtc) : -1;
+	xf86CrtcPtr crtc = I830DRI2DrawableCrtc(draw);
+	int index = crtc ? intel_crtc_to_index(crtc) : -1;
 	CARD64 current_msc, current_ust, request_msc;
-        uint32_t seq;
+	uint32_t seq;
 
 	/* Drawable not visible, return immediately */
-	if (pipe == -1)
+	if (index == -1)
 		goto out_complete;
 
 	wait_info = calloc(1, sizeof(DRI2FrameEventRec));
@@ -1397,7 +1397,7 @@ I830DRI2ScheduleWaitMSC(ClientPtr client, DrawablePtr draw, CARD64 target_msc,
 		if (current_msc >= target_msc)
 			target_msc = current_msc;
 		vbl.request.type =
-			DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | pipe_select(pipe);
+			DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | crtc_select(index);
 		vbl.request.sequence = intel_crtc_msc_to_sequence(scrn, crtc, target_msc);
 		vbl.request.signal = seq;
 
@@ -1425,7 +1425,7 @@ I830DRI2ScheduleWaitMSC(ClientPtr client, DrawablePtr draw, CARD64 target_msc,
 	 * so we queue an event that will satisfy the divisor/remainder equation.
 	 */
 	vbl.request.type =
-		DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | pipe_select(pipe);
+		DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT | crtc_select(index);
 
         request_msc = current_msc - (current_msc % divisor) +
                 remainder;

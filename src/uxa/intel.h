@@ -467,6 +467,7 @@ Bool intel_dri3_screen_init(ScreenPtr screen);
 
 extern Bool intel_crtc_on(xf86CrtcPtr crtc);
 int intel_crtc_to_pipe(xf86CrtcPtr crtc);
+int intel_crtc_to_index(xf86CrtcPtr crtc);
 
 /* intel_memory.c */
 unsigned long intel_get_fence_size(intel_screen_private *intel, unsigned long size);
