@@ -102,11 +102,11 @@ static int sna_video_sprite_stop(ddStopVideo_ARGS)
 
 	for (i = 0; i < video->sna->mode.num_real_crtc; i++) {
 		xf86CrtcPtr crtc = config->crtc[i];
-		int pipe;
+		int index;
 
-		pipe = sna_crtc_pipe(crtc);
-		assert(pipe < ARRAY_SIZE(video->bo));
-		if (video->bo[pipe] == NULL)
+		index = sna_crtc_index(crtc);
+		assert(index < ARRAY_SIZE(video->bo));
+		if (video->bo[index] == NULL)
 			continue;
 
 		memset(&s, 0, sizeof(s));
@@ -115,9 +115,9 @@ static int sna_video_sprite_stop(ddStopVideo_ARGS)
 			xf86DrvMsg(video->sna->scrn->scrnIndex, X_ERROR,
 				   "failed to disable plane\n");
 
-		if (video->bo[pipe])
-			kgem_bo_destroy(&video->sna->kgem, video->bo[pipe]);
-		video->bo[pipe] = NULL;
+		if (video->bo[index])
+			kgem_bo_destroy(&video->sna->kgem, video->bo[index]);
+		video->bo[index] = NULL;
 	}
 
 	sna_window_set_port((WindowPtr)draw, NULL);
@@ -290,7 +290,7 @@ sna_video_sprite_show(struct sna *sna,
 		      BoxPtr dstBox)
 {
 	struct local_mode_set_plane s;
-	int pipe = sna_crtc_pipe(crtc);
+	int index = sna_crtc_index(crtc);
 
 	/* XXX handle video spanning multiple CRTC */
 
@@ -301,7 +301,7 @@ sna_video_sprite_show(struct sna *sna,
 #define LOCAL_IOCTL_I915_SET_SPRITE_COLORKEY DRM_IOWR(DRM_COMMAND_BASE + DRM_I915_SET_SPRITE_COLORKEY, struct local_intel_sprite_colorkey)
 #define LOCAL_IOCTL_MODE_ADDFB2 DRM_IOWR(0xb8, struct local_mode_fb_cmd2)
 
-	if (video->color_key_changed & (1 << pipe) && video->has_color_key) {
+	if (video->color_key_changed & (1 << index) && video->has_color_key) {
 		struct local_intel_sprite_colorkey {
 			uint32_t plane_id;
 			uint32_t min_value;
@@ -339,17 +339,17 @@ sna_video_sprite_show(struct sna *sna,
 			}
 		}
 
-		video->color_key_changed &= ~(1 << pipe);
+		video->color_key_changed &= ~(1 << index);
 	}
 
-	if (video->colorspace_changed & (1 << pipe)) {
+	if (video->colorspace_changed & (1 << index)) {
 		DBG(("%s: updating colorspace: %x\n",
 		     __FUNCTION__, video->colorspace));
 
 		sna_crtc_set_sprite_colorspace(crtc, video->idx,
 					       video->colorspace);
 
-		video->colorspace_changed &= ~(1 << pipe);
+		video->colorspace_changed &= ~(1 << index);
 	}
 
 	update_dst_box_to_crtc_coords(sna, crtc, dstBox);
@@ -468,18 +468,18 @@ sna_video_sprite_show(struct sna *sna,
 
 	if (drmIoctl(sna->kgem.fd, LOCAL_IOCTL_MODE_SETPLANE, &s)) {
 		DBG(("SET_PLANE failed: ret=%d\n", errno));
-		if (video->bo[pipe]) {
-			kgem_bo_destroy(&sna->kgem, video->bo[pipe]);
-			video->bo[pipe] = NULL;
+		if (video->bo[index]) {
+			kgem_bo_destroy(&sna->kgem, video->bo[index]);
+			video->bo[index] = NULL;
 		}
 		return false;
 	}
 
 	__kgem_bo_clear_dirty(frame->bo);
 
-	if (video->bo[pipe])
-		kgem_bo_destroy(&sna->kgem, video->bo[pipe]);
-	video->bo[pipe] = kgem_bo_reference(frame->bo);
+	if (video->bo[index])
+		kgem_bo_destroy(&sna->kgem, video->bo[index]);
+	video->bo[index] = kgem_bo_reference(frame->bo);
 	return true;
 }
 
@@ -529,7 +529,7 @@ static int sna_video_sprite_put_image(ddPutImage_ARGS)
 	for (i = 0; i < video->sna->mode.num_real_crtc; i++) {
 		xf86CrtcPtr crtc = config->crtc[i];
 		struct sna_video_frame frame;
-		const int pipe = sna_crtc_pipe(crtc);
+		const int index = sna_crtc_index(crtc);
 		bool hw_scaling = has_hw_scaling(sna, video);
 		INT32 x1, x2, y1, y2;
 		Rotation rotation;
@@ -547,15 +547,15 @@ retry:
 		RegionIntersect(&reg, &reg, &clip);
 		if (RegionNil(&reg)) {
 off:
-			assert(pipe < ARRAY_SIZE(video->bo));
-			if (video->bo[pipe]) {
+			assert(index < ARRAY_SIZE(video->bo));
+			if (video->bo[index]) {
 				struct local_mode_set_plane s;
 				memset(&s, 0, sizeof(s));
 				s.plane_id = sna_crtc_to_sprite(crtc, video->idx);
 				if (drmIoctl(video->sna->kgem.fd, LOCAL_IOCTL_MODE_SETPLANE, &s))
 					xf86DrvMsg(video->sna->scrn->scrnIndex, X_ERROR,
 						   "failed to disable plane\n");
-				video->bo[pipe] = NULL;
+				video->bo[index] = NULL;
 			}
 			continue;
 		}
