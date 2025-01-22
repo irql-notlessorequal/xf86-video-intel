@@ -165,7 +165,11 @@ thus incurring no additional overhead in the composited case. Also note that
 not all compositing managers prevent tearing, and if the outputs are
 rotated, there will still be tearing without TearFree enabled.
 .IP
-Default: TearFree is disabled.
+Default:
+.IP
+- Enabled on Broadwell and newer. (requires PPGTT)
+.IP
+- Disabled on Cherryview/Haswell or older.
 .TP
 .BI "Option \*qReprobeOutputs\*q \*q" boolean \*q
 Disable or enable rediscovery of connected displays during server startup.
