@@ -622,7 +622,7 @@ decode_3d_1c(struct kgem *kgem, uint32_t offset)
 
 int kgem_gen2_decode_3d(struct kgem *kgem, uint32_t offset)
 {
-    const static struct {
+    static const struct {
 	uint32_t opcode;
 	int min_len;
 	int max_len;
