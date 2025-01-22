@@ -816,8 +816,8 @@ static int sna_video_has_sprites(struct sna *sna)
 	min = -1;
 	for (i = 0; i < sna->mode.num_real_crtc; i++) {
 		unsigned count =  sna_crtc_count_sprites(config->crtc[i]);
-		DBG(("%s: %d sprites found on pipe %d\n", __FUNCTION__,
-		     count, sna_crtc_pipe(config->crtc[i])));
+		DBG(("%s: %d sprites found on crtc %d\n", __FUNCTION__,
+		     count, sna_crtc_index(config->crtc[i])));
 		if (count < min)
 			min = count;
 	}

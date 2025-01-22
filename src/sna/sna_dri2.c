@@ -1572,10 +1572,10 @@ draw_current_msc(DrawablePtr draw, xf86CrtcPtr crtc, uint64_t msc)
 		if (priv->crtc != crtc) {
 			const struct ust_msc *last = sna_crtc_last_swap(priv->crtc);
 			const struct ust_msc *this = sna_crtc_last_swap(crtc);
-			DBG(("%s: Window transferring from pipe=%d [msc=%llu] to pipe=%d [msc=%llu], delta now %lld\n",
+			DBG(("%s: Window transferring from crtc=%d [msc=%llu] to crtc=%d [msc=%llu], delta now %lld\n",
 			     __FUNCTION__,
-			     sna_crtc_pipe(priv->crtc), (long long)last->msc,
-			     sna_crtc_pipe(crtc), (long long)this->msc,
+			     sna_crtc_index(priv->crtc), (long long)last->msc,
+			     sna_crtc_index(crtc), (long long)this->msc,
 			     (long long)(priv->msc_delta + this->msc - last->msc)));
 			priv->msc_delta += this->msc - last->msc;
 			priv->crtc = crtc;
@@ -1647,8 +1647,8 @@ static void fake_swap_complete(struct sna *sna, ClientPtr client,
 		crtc = sna_primary_crtc(sna);
 
 	swap = sna_crtc_last_swap(crtc);
-	DBG(("%s(type=%d): draw=%ld, pipe=%d, frame=%lld [msc %lld], tv=%d.%06d\n",
-	     __FUNCTION__, type, (long)draw->id, crtc ? sna_crtc_pipe(crtc) : -1,
+	DBG(("%s(type=%d): draw=%ld, crtc=%d, frame=%lld [msc %lld], tv=%d.%06d\n",
+	     __FUNCTION__, type, (long)draw->id, crtc ? sna_crtc_index(crtc) : -1,
 	     (long long)swap->msc,
 	     (long long)draw_current_msc(draw, crtc, swap->msc),
 	     swap->tv_sec, swap->tv_usec));
@@ -2068,7 +2068,7 @@ can_flip(struct sna * sna,
 	}
 
 	if (!sna_crtc_is_on(crtc)) {
-		DBG(("%s: ref-pipe=%d is disabled\n", __FUNCTION__, sna_crtc_pipe(crtc)));
+		DBG(("%s: ref-crtc=%d is disabled\n", __FUNCTION__, sna_crtc_index(crtc)));
 		return false;
 	}
 
@@ -3138,8 +3138,9 @@ sna_dri2_schedule_flip(ClientPtr client, DrawablePtr draw, xf86CrtcPtr crtc,
 	if (immediate) {
 		bool signal = false;
 		info = sna->dri2.flip_pending;
-		DBG(("%s: performing immediate swap on pipe %d, pending? %d, mode: %d, continuation? %d\n",
-		     __FUNCTION__, sna_crtc_pipe(crtc),
+
+		DBG(("%s: performing immediate swap on crtc %d, pending? %d, mode: %d, continuation? %d\n",
+		     __FUNCTION__, sna_crtc_index(crtc),
 		     info != NULL, info ? info->flip_continue : 0,
 		     info && info->draw == draw));
 
@@ -3523,8 +3524,8 @@ sna_dri2_get_msc(DrawablePtr draw, CARD64 *ust, CARD64 *msc)
 	const struct ust_msc *swap;
 	union drm_wait_vblank vbl;
 
-	DBG(("%s(draw=%ld, pipe=%d)\n", __FUNCTION__, draw->id,
-	     crtc ? sna_crtc_pipe(crtc) : -1));
+	DBG(("%s(draw=%ld, crtc=%d)\n", __FUNCTION__, draw->id,
+	     crtc ? sna_crtc_index(crtc) : -1));
 
 	/* Drawable not displayed, make up a *monotonic* value */
 	if (crtc == NULL)
@@ -3560,8 +3561,8 @@ sna_dri2_schedule_wait_msc(ClientPtr client, DrawablePtr draw, CARD64 target_msc
 	const struct ust_msc *swap;
 
 	crtc = sna_dri2_get_crtc(draw);
-	DBG(("%s(pipe=%d, target_msc=%llu, divisor=%llu, rem=%llu)\n",
-	     __FUNCTION__, crtc ? sna_crtc_pipe(crtc) : -1,
+	DBG(("%s(crtc=%d, target_msc=%llu, divisor=%llu, rem=%llu)\n",
+	     __FUNCTION__, crtc ? sna_crtc_index(crtc) : -1,
 	     (long long)target_msc,
 	     (long long)divisor,
 	     (long long)remainder));
