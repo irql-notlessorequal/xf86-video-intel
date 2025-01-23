@@ -57,14 +57,9 @@
 #define page_aligned
 #endif
 
-#if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__) && defined(__x86_64__)
-#define fastcall __attribute__((vectorcall))
-#elif defined(__clang__) && defined(__OPTIMIZE__) && defined(__x86_64__)
-#define fastcall __attribute__((vectorcall))
-#elif defined(__i386__) && defined(__OPTIMIZE__)
-/**
- * Restrict to x86-32 only since 64-bit land is different.
- */
+#if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__)
+#define fastcall __attribute__((regparm(3)))
+#elif defined(__clang__) && defined(__OPTIMIZE__)
 #define fastcall __attribute__((regparm(3)))
 #else
 #define fastcall
