@@ -65,29 +65,28 @@
 #define fastcall
 #endif
 
-/* clang doesn't have an equivalent generalization like GCC has, don't bother tuning for Intel. */
-#ifdef HAS_CLANG
+#if HAS_GCC(4, 6)
+#define sse2 fast __attribute__((target("sse2,fpmath=sse,tune=nocona")))
+#define sse4_2 fast __attribute__((target("sse4.2,sse2,fpmath=sse,tune=nehalem")))
+#elif defined(HAS_CLANG)
 #define sse2 fast __attribute__((target("sse2,fpmath=sse")))
 #define sse4_2 fast __attribute__((target("sse4.2,sse2,fpmath=sse")))
-#elif HAS_GCC(4, 9)
-#define sse2 fast __attribute__((target("sse2,fpmath=sse,tune=intel")))
-#define sse4_2 fast __attribute__((target("sse4.2,sse2,fpmath=sse,tune=intel")))
 #endif
 
 #if HAS_GCC(4, 6) && defined(__OPTIMIZE__)
 #define fast __attribute__((optimize("Os")))
-#elif HAS_CLANG && defined(__OPTIMIZE__)
+#elif defined(HAS_CLANG) && defined(__OPTIMIZE__)
 #define fast __attribute__((optimize("Os")))
 #else
 #define fast
 #endif
 
-#ifdef HAS_CLANG
-#define avx2 fast __attribute__((target("avx2,avx,sse4.2,sse2,fpmath=sse")))
+#if HAS_GCC(4, 9)
+#define avx2 fast __attribute__((target("avx2,avx,sse4.2,sse2,fpmath=sse,tune=intel")))
 #define assume_aligned(ptr, align) __builtin_assume_aligned((ptr), (align))
 #define assume_misaligned(ptr, align, offset) __builtin_assume_aligned((ptr), (align), (offset))
-#elif HAS_GCC(4, 9)
-#define avx2 fast __attribute__((target("avx2,avx,sse4.2,sse2,fpmath=sse,tune=intel")))
+#elif defined(HAS_CLANG)
+#define avx2 fast __attribute__((target("avx2,avx,sse4.2,sse2,fpmath=sse")))
 #define assume_aligned(ptr, align) __builtin_assume_aligned((ptr), (align))
 #define assume_misaligned(ptr, align, offset) __builtin_assume_aligned((ptr), (align), (offset))
 #else
