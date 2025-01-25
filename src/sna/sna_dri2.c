@@ -1460,6 +1460,22 @@ sna_dri2_copy_region2(ScreenPtr screen,
 	     region->extents.x2, region->extents.y2,
 	     region_num_rects(region)));
 
+#if HAS_PIXMAP_SHARING
+	if (is_front(dst->attachment))
+	{
+		if (draw->pScreen != screen)
+		{
+			draw = DRI2UpdatePrime(draw, dst);
+			
+			if (!draw)
+			{
+				DBG(("%s: DRI2UpdatePrime returned NULL, discarding call.", __FUNCTION__));
+				return;
+			}
+		}
+	}
+#endif
+
 	__sna_dri2_copy_region(sna, screen, draw, region, src, dst, DRI2_DAMAGE);
 }
 

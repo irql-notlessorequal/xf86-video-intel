@@ -299,27 +299,6 @@ free_bo:
 	return NULL;
 }
 
-static PixmapPtr sna_dri3_pixmap_from_fds(ScreenPtr screen,
-					 CARD8 num_fd,
-					 const int *fds,
-					 CARD16 width,
-					 CARD16 height,
-					 const CARD32 *strides,
-					 const CARD32 *offsets,
-					 CARD8 depth,
-					 CARD8 bpp,
-					 CARD64 modifier)
-{
-	if (num_fd == 0) {
-		return NULL;
-	} else if (num_fd == 1) {
-		return sna_dri3_pixmap_from_fd(screen, fds[0], width, height, strides[0], depth, bpp);
-	} else {
-		/* TODO */
-		return NULL;
-	}
-}
-
 static int sna_dri3_fd_from_pixmap(ScreenPtr screen,
 				   PixmapPtr pixmap,
 				   CARD16 *stride,
