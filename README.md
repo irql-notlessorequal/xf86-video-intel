@@ -65,3 +65,17 @@ There are no plans to address this, a solution is to use the `modesetting` drive
 If you wish to disable this, set the "PreferYTiling" option to "false".
 
 Please create an issue on the repository's issue tracker if you need to disable it.
+
+### Missing symbols (i.e. `vbeFree`)
+
+This is a known issue and will eventually be addressed.
+
+In the meantime a workaround is to add the following to your Xorg config:
+
+```
+Section "Module"
+Load "vgahw"
+Load "vbe"
+Load "shadowfb"
+EndSection
+```

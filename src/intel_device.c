@@ -918,7 +918,7 @@ char *intel_str_replace(char *orig, char *rep, char *with) {
 }
 
 #ifdef __linux__
-int __get_render_node_count()
+int __get_render_node_count(void)
 {
 	DIR *d;
 	struct dirent *dir;
@@ -1029,7 +1029,7 @@ int __get_correct_render_node(struct intel_device *dev)
 	return 1;
 }
 #else
-int __get_render_node_count()
+int __get_render_node_count(void)
 {
 	return 1;
 }

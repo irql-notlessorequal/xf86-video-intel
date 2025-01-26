@@ -3619,8 +3619,19 @@ sna_dri2_schedule_wait_msc(ClientPtr client, DrawablePtr draw, CARD64 target_msc
 		     (long long)target_msc,
 		     (long long)divisor,
 		     (long long)remainder));
-		target_msc = current_msc + remainder - current_msc % divisor;
-		if (target_msc <= current_msc)
+		/*
+		 * If we get here, target_msc has already passed or we don't have one,
+		 * so we queue an event that will satisfy the divisor/remainder equation.
+		 */
+		target_msc = current_msc - (current_msc % divisor) + remainder;
+
+		/*
+		 * If calculated remainder is larger than requested remainder,
+		 * it means we've passed the last point where
+		 * seq % divisor == remainder, so we need to wait for the next time
+		 * that will happen.
+		 */
+		if ((current_msc % divisor) >= remainder)
 			target_msc += divisor;
 	}
 
