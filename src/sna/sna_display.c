@@ -8288,6 +8288,8 @@ xf86CrtcPtr sna_primary_crtc(struct sna *sna)
 	return first_active_crtc(sna);
 }
 
+#define FORCEWAKE_GEN9_CPU_GTI_BLIT		130044
+#define FORCEWAKE_GEN9_USER_BIT			2
 #define MI_LOAD_REGISTER_IMM			(0x22<<23)
 
 static bool sna_emit_wait_for_scanline_skl(struct sna *sna,
@@ -8316,7 +8318,7 @@ static bool sna_emit_wait_for_scanline_skl(struct sna *sna,
 	b[2] = ~event;
 	b[3] = MI_LOAD_REGISTER_IMM | 1;
 	b[4] = 0xa188; /* FORCEWAKE_GT_GEN9 */
-	b[5] = 2 << 16 | 3;
+	b[5] = FORCEWAKE_GEN9_CPU_GTI_BLIT | FORCEWAKE_GEN9_USER_BIT;
 
 	/* The documentation says that the LOAD_SCAN_LINES command
 	 * always comes in pairs. Don't ask me why. */
@@ -8339,7 +8341,7 @@ static bool sna_emit_wait_for_scanline_skl(struct sna *sna,
 
 	b[11] = MI_LOAD_REGISTER_IMM | 1;
 	b[12] = 0xa188; /* FORCEWAKE_GT_GEN9 */
-	b[13] = 2 << 16;
+	b[13] = FORCEWAKE_GEN9_CPU_GTI_BLIT;
 	b[14] = MI_LOAD_REGISTER_IMM | 1;
 	b[15] = 0x44050; /* DERRMR */
 	b[16] = ~0;
