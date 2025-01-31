@@ -146,10 +146,6 @@ struct sna_dri2_event {
 	int signal;
 };
 
-#if DRI2INFOREC_VERSION < 10
-#define ASYNC_SWAP_FEATURE_TOO_OLD 1
-#endif
-
 #define KEEPALIVE_ASYNC 8 /* wait ~100ms before discarding swap caches */
 #define KEEPALIVE 1
 
@@ -313,7 +309,6 @@ sna_dri2_get_back(struct sna *sna,
 		}
 
 		flags = 0;
-#ifndef ASYNC_SWAP_FEATURE_TOO_OLD
 		if (sna->enable_async_swap && back->flags) {
 			BoxRec box;
 
@@ -329,7 +324,6 @@ sna_dri2_get_back(struct sna *sna,
 						   &box, 1, COPY_LAST | COPY_DRI))
 				flags = back->flags;
 		}
-#endif
 	}
 	assert(bo->active_scanout == 0);
 
@@ -3834,23 +3828,6 @@ bool sna_dri2_open(struct sna *sna, ScreenPtr screen)
 	info.DestroyBuffer2 = sna_dri2_destroy_buffer2;
 	info.CopyRegion2 = sna_dri2_copy_region2;
 #endif
-
-#ifndef ASYNC_SWAP_FEATURE_TOO_OLD
-	if (xf86ReturnOptValBool(sna->Options, OPTION_ASYNC_SWAP, FALSE)) {
-		xf86DrvMsg(sna->scrn->scrnIndex, X_INFO, "enabled async swap and buffer age\n");
-		info.version = 10;
-		info.scheduleSwap0 = 1;
-		info.bufferAge = 1;
-
-		sna->enable_async_swap = true;
-	} else
-#endif
-	{
-#ifndef ASYNC_SWAP_FEATURE_TOO_OLD
-		xf86DrvMsg(sna->scrn->scrnIndex, X_INFO, "experimental async swap not requested by user, disabling.\n");
-#endif
-		sna->enable_async_swap = false;
-	}
 
 	return DRI2ScreenInit(screen, &info);
 }

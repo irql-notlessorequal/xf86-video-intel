@@ -1042,9 +1042,6 @@ void sna_present_update(struct sna *sna)
 	else
 		present_info.capabilities &= ~PresentCapabilityAsync;
 
-	if (xf86ReturnOptValBool(sna->Options, OPTION_ASYNC_PRESENT_WIP, FALSE))
-		present_info.capabilities |= PresentCapabilityAsyncMayTear;
-
 	DBG(("%s: has_async_flip? %d\n", __FUNCTION__,
 	     !!(present_info.capabilities & PresentCapabilityAsync)));
 }

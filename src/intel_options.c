@@ -40,7 +40,6 @@ const OptionInfoRec intel_options[] = {
 	{OPTION_REDUCE_FLUSHES, "ExperimentalReduceFlushes", OPTV_BOOLEAN, {0}, 0},
 	{OPTION_ENABLE_Y_SCANOUT, "EnableYTilingScanout", OPTV_BOOLEAN, {0}, 0},
 	{OPTION_ENABLE_Y_COLOR_TILING, "EnableYColorTiling", OPTV_BOOLEAN, {0}, 0},
-	{OPTION_ASYNC_PRESENT_WIP, "ExperimentalAsyncPresent", OPTV_BOOLEAN, {0}, 0},
 #endif
 #ifdef USE_UXA
 	{OPTION_FALLBACKDEBUG,	"FallbackDebug",OPTV_BOOLEAN,	{0},	0},

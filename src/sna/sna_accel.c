@@ -18453,6 +18453,12 @@ bool sna_accel_init(ScreenPtr screen, struct sna *sna)
 	     __FUNCTION__, backend, sna->render.prefer_gpu));
 
 	sna->enable_reduced_flushing = sna_option_reduced_flushes(sna);
+	sna->enable_async_swap = xf86ReturnOptValBool(sna->Options, OPTION_ASYNC_SWAP, FALSE);
+
+	if (sna->enable_async_swap)
+	{
+		xf86DrvMsg(sna->scrn->scrnIndex, X_WARNING, "SNA: You have enabled asynchronous swapping, things are about to break!\n");
+	}
 
 	kgem_reset(&sna->kgem);
 	sigtrap_init();
