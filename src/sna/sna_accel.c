@@ -1111,6 +1111,15 @@ static unsigned small_copy(const RegionRec *region)
 }
 
 #if HAS_PRIME_FLIPPING
+static Bool enable_prime_sync_basic(struct sna *sna)
+{
+	static int prime_sync_basic = -1;
+	if (prime_sync_basic == -1) {
+		prime_sync_basic = xf86ReturnOptValBool(sna->Options, OPTION_SNA_PRIME_SYNC, FALSE);
+	}
+
+	return prime_sync_basic;
+}
 
 static void sna_prime_redisplay_dirty(struct sna *sna, ScreenPtr screen, PixmapDirtyUpdatePtr dirty)
 {
@@ -1174,16 +1183,15 @@ static Bool sna_prime_present_shared_pixmap(PixmapPtr secondary_dst)
 
 		return TRUE;
 	}
-	else
-	{
-		return FALSE;
-	}
+
+	return FALSE;
 }
 
 static Bool sna_request_shared_pixmap_notify_damage(PixmapPtr ppix)
 {
 	ScreenPtr screen = ppix->drawable.pScreen;
 	struct sna *sna = to_sna_from_screen(screen);
+
 	if (sna == NULL)
 		return FALSE;
 
@@ -1197,6 +1205,7 @@ static Bool sna_stop_flipping_pixmap_tracking(DrawablePtr src, PixmapPtr seconda
 {
 	ScreenPtr screen = src->pScreen;
 	struct sna *sna = to_sna_from_screen(screen);
+
 	if (sna == NULL)
 		return FALSE;
 
@@ -18363,9 +18372,12 @@ bool sna_accel_init(ScreenPtr screen, struct sna *sna)
 #endif
 
 #if HAS_PRIME_FLIPPING
-	screen->PresentSharedPixmap = sna_prime_present_shared_pixmap;
-	screen->RequestSharedPixmapNotifyDamage = sna_request_shared_pixmap_notify_damage;
-	screen->StopFlippingPixmapTracking = sna_stop_flipping_pixmap_tracking;
+	if (enable_prime_sync_basic(sna))
+	{
+		screen->PresentSharedPixmap = sna_prime_present_shared_pixmap;
+		screen->RequestSharedPixmapNotifyDamage = sna_request_shared_pixmap_notify_damage;
+		screen->StopFlippingPixmapTracking = sna_stop_flipping_pixmap_tracking;
+	}
 #endif
 
 	assert(screen->GetWindowPixmap == NULL);

@@ -1113,6 +1113,16 @@ static void sna_dri_init(struct sna *sna, ScreenPtr screen)
 }
 
 #if HAS_PRIME_FLIPPING_SYNC
+static Bool enable_prime_sync_full(struct sna *sna)
+{
+	static int prime_sync_full = -1;
+	if (prime_sync_full == -1) {
+		prime_sync_full = xf86ReturnOptValBool(sna->Options, OPTION_SNA_PRIME_SYNC, FALSE);
+	}
+
+	return prime_sync_full;
+}
+
 static Bool has_page_flipping(struct sna *sna)
 {
 	static int page_flip_enabled = -1;
@@ -1128,6 +1138,7 @@ sna_enable_shared_pixmap_flipping(RRCrtcPtr crtc, PixmapPtr front, PixmapPtr bac
 {
 	ScreenPtr screen = crtc->pScreen;
 	struct sna *sna = to_sna_from_screen(screen);
+
 	xf86CrtcPtr xf86Crtc = crtc->devPrivate;
 
 	if (!xf86Crtc)
@@ -1136,14 +1147,14 @@ sna_enable_shared_pixmap_flipping(RRCrtcPtr crtc, PixmapPtr front, PixmapPtr bac
 	if (!has_page_flipping(sna))
 		return FALSE;
 
-	/* TODO(nullifed) */
-	return TRUE;
+	/* TODO(irql) */
+	return FALSE;
 }
 
 static void
 sna_disable_shared_pixmap_flipping(RRCrtcPtr crtc)
 {
-	/* TODO(nullifed) */
+	/* TODO(irql) */
 }
 
 static PixmapDirtyUpdatePtr sna_dirty_get_ent(ScreenPtr screen, PixmapPtr secondary_dst)
@@ -1169,6 +1180,7 @@ sna_start_flipping_pixmap_tracking(RRCrtcPtr crtc, DrawablePtr src,
 {
 	ScreenPtr screen = src->pScreen;
 	struct sna *sna = to_sna_from_screen(screen);
+
 	if (sna == NULL)
 		return FALSE;
 
@@ -1217,9 +1229,12 @@ sna_mode_init(struct sna *sna, ScreenPtr screen)
 		rp->rrGetInfo = sna_randr_getinfo;
 
 #if HAS_PRIME_FLIPPING_SYNC
-		rp->rrEnableSharedPixmapFlipping = sna_enable_shared_pixmap_flipping;
-		rp->rrDisableSharedPixmapFlipping = sna_disable_shared_pixmap_flipping;
-		rp->rrStartFlippingPixmapTracking = sna_start_flipping_pixmap_tracking;
+		if (enable_prime_sync_full(sna))
+		{
+			rp->rrEnableSharedPixmapFlipping = sna_enable_shared_pixmap_flipping;
+			rp->rrDisableSharedPixmapFlipping = sna_disable_shared_pixmap_flipping;
+			rp->rrStartFlippingPixmapTracking = sna_start_flipping_pixmap_tracking;
+		}
 #endif
 
 		/* Simulate a hotplug event on wakeup to force a RR probe */
