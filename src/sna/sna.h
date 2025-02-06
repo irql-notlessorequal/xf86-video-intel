@@ -476,6 +476,7 @@ typedef struct _sna_pixmap_priv
 {
 	PixmapDirtyUpdatePtr dirty;
 	Bool defer_dirty_update;
+	DrawablePtr secondary_src;
 	Bool notify_on_damage;
 } sna_pixmap_priv_rec, *sna_pixmap_priv;
 

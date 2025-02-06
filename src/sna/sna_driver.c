@@ -1186,6 +1186,9 @@ sna_start_flipping_pixmap_tracking(RRCrtcPtr crtc, DrawablePtr src,
 		return FALSE;
 	}
 
+	ppriv1->secondary_src = src;
+	ppriv2->secondary_src = src;
+
 	ppriv1->dirty = sna_dirty_get_ent(screen, secondary_dst1);
 	ppriv2->dirty = sna_dirty_get_ent(screen, secondary_dst2);
 
