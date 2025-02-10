@@ -190,7 +190,7 @@ static Bool uxa_realize_glyph_caches(ScreenPtr pScreen)
 		ValidatePicture(picture);
 
 		cache->picture = picture;
-		cache->glyphs = calloc(sizeof(GlyphPtr), GLYPH_CACHE_SIZE);
+		cache->glyphs = calloc(GLYPH_CACHE_SIZE, sizeof(GlyphPtr));
 		if (!cache->glyphs)
 			goto bail;
 

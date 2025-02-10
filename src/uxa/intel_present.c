@@ -168,7 +168,7 @@ intel_present_queue_vblank(RRCrtcPtr                    crtc,
 	int                                     ret;
 	uint32_t                                seq;
 
-	event = calloc(sizeof(struct intel_present_vblank_event), 1);
+	event = calloc(1, sizeof(struct intel_present_vblank_event));
 	if (!event)
 		return BadAlloc;
 	event->event_id = event_id;

@@ -269,8 +269,8 @@ bool sna_glyphs_create(struct sna *sna)
 
 		cache->count = cache->evict = 0;
 		cache->picture = picture;
-		cache->glyphs = calloc(sizeof(struct sna_glyph *),
-				       GLYPH_CACHE_SIZE);
+		cache->glyphs = calloc(GLYPH_CACHE_SIZE,
+				       sizeof(struct sna_glyph *));
 		if (!cache->glyphs)
 			goto bail;
 

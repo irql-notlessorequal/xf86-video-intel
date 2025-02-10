@@ -470,7 +470,7 @@ Bool uxa_driver_init(ScreenPtr screen, uxa_driver_t * uxa_driver)
 	if (!dixRegisterPrivateKey(&uxa_screen_index, PRIVATE_SCREEN, 0))
 	    return FALSE;
 #endif
-	uxa_screen = calloc(sizeof(uxa_screen_t), 1);
+	uxa_screen = calloc(1, sizeof(uxa_screen_t));
 
 	if (!uxa_screen) {
 		LogMessage(X_WARNING,

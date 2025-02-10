@@ -1544,7 +1544,7 @@ I810ScreenInit(SCREEN_INIT_ARGS_DECL)
    pI810 = I810PTR(scrn);
    hwp = VGAHWPTR(scrn);
 
-   pI810->LpRing = calloc(sizeof(I810RingBuffer),1);
+   pI810->LpRing = calloc(1, sizeof(I810RingBuffer));
    if (!pI810->LpRing) {
      xf86DrvMsg(scrn->scrnIndex, X_ERROR,
 		"Could not allocate lpring data structure.\n");

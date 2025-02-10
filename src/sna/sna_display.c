@@ -3793,7 +3793,7 @@ sna_crtc_add(ScrnInfoPtr scrn, unsigned id, int index)
 
 	DBG(("%s(%d): is-zaphod? %d\n", __FUNCTION__, id, is_zaphod(scrn)));
 
-	sna_crtc = calloc(sizeof(struct sna_crtc), 1);
+	sna_crtc = calloc(1, sizeof(struct sna_crtc));
 	if (sna_crtc == NULL)
 		return false;
 
@@ -5321,7 +5321,7 @@ sna_output_add(struct sna *sna, unsigned id, unsigned serial)
 		possible_crtcs >>= ffs(zaphod_crtcs) - 1;
 	}
 
-	sna_output = calloc(sizeof(struct sna_output), 1);
+	sna_output = calloc(1, sizeof(struct sna_output));
 	if (!sna_output)
 		return -1;
 

@@ -313,7 +313,7 @@ intel_crtc_apply(xf86CrtcPtr crtc)
 	int fb_id, x, y;
 	int i, ret = FALSE;
 
-	output_ids = calloc(sizeof(uint32_t), xf86_config->num_output);
+	output_ids = calloc(xf86_config->num_output, sizeof(uint32_t));
 	if (!output_ids)
 		return FALSE;
 
@@ -734,7 +734,7 @@ intel_crtc_init(ScrnInfoPtr scrn, struct intel_mode *mode, drmModeResPtr mode_re
 	xf86CrtcPtr crtc;
 	struct intel_crtc *intel_crtc;
 
-	intel_crtc = calloc(sizeof(struct intel_crtc), 1);
+	intel_crtc = calloc(1, sizeof(struct intel_crtc));
 	if (intel_crtc == NULL)
 		return;
 
@@ -1542,7 +1542,7 @@ intel_output_init(ScrnInfoPtr scrn, struct intel_mode *mode, drmModeResPtr mode_
 			return;
 		}
 	}
-	kencoders = calloc(sizeof(drmModeEncoderPtr), koutput->count_encoders);
+	kencoders = calloc(koutput->count_encoders, sizeof(drmModeEncoderPtr));
 	if (!kencoders) {
 		goto out_free_encoders;
 	}
@@ -1558,7 +1558,7 @@ intel_output_init(ScrnInfoPtr scrn, struct intel_mode *mode, drmModeResPtr mode_
 		goto out_free_encoders;
 	}
 
-	intel_output = calloc(sizeof(struct intel_output), 1);
+	intel_output = calloc(1, sizeof(struct intel_output));
 	if (!intel_output) {
 		xf86OutputDestroy(output);
 		goto out_free_encoders;
