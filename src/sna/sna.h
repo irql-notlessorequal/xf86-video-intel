@@ -295,8 +295,6 @@ struct sna {
 	bool ignore_copy_area : 1;
 	/* Enables an unimplemented DRI2 swap extension. */
 	bool enable_async_swap : 1;
-	/* Enables an optimization that probably doesn't even work at all still. */
-	bool enable_reduced_flushing : 1;
 
 	unsigned watch_shm_flush;
 	unsigned watch_dri_flush;

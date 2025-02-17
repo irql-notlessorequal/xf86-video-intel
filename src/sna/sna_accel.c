@@ -17600,17 +17600,7 @@ static void
 sna_flush_callback(CallbackListPtr *list, pointer user_data, pointer call_data)
 {
 	struct sna *sna = user_data;
-
-	if (sna->enable_reduced_flushing) {
-		/* XXX requires mesa to implement glXWaitX()! */
-		if (!sna->needs_dri_flush)
-			return;
-
-		sna_accel_flush(sna);
-		sna->needs_dri_flush = false;
-	} else {
-		sna_accel_flush(sna);
-	}
+	sna_accel_flush(sna);
 }
 
 static void
@@ -18298,11 +18288,6 @@ static bool sna_option_accel_blt(struct sna *sna)
 	return strcasecmp(s, "blt") == 0;
 }
 
-static bool sna_option_reduced_flushes(struct sna *sna)
-{
-	return xf86ReturnOptValBool(sna->Options, OPTION_REDUCE_FLUSHES, FALSE);
-}
-
 #if HAVE_NOTIFY_FD
 static void sna_accel_notify(int fd, int ready, void *data)
 {
@@ -18427,7 +18412,6 @@ bool sna_accel_init(ScreenPtr screen, struct sna *sna)
 	DBG(("%s(backend=%s, prefer_gpu=%x)\n",
 	     __FUNCTION__, backend, sna->render.prefer_gpu));
 
-	sna->enable_reduced_flushing = sna_option_reduced_flushes(sna);
 	sna->enable_async_swap = xf86ReturnOptValBool(sna->Options, OPTION_ASYNC_SWAP, FALSE);
 
 	if (sna->enable_async_swap)

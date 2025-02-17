@@ -368,18 +368,6 @@ will assign xrandr outputs HDMI1 and DP2 and CRTCs 0 and 2 to this instance of t
 .RE
 .TP
 
-.BI "Option \*qExperimentalReduceFlushes\*q \*q" boolean \*q
-This option enables a previously broken optimization for flushing.
-.br
-It was originally disabled due to Mesa not implementing the \*qglXWaitX()\*q call, causing a plethora of issues.
-
-.B Enabling this is not a good idea.
-.IP
-Default: Disabled.
-.br
-SNA only.
-.TP
-
 .BI "Option \*qEnableYTilingScanout\*q \*q" boolean \*q
 This option tells SNA to enable Y-tiling for scanout.
 .br

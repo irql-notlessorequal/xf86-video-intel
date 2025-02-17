@@ -38,7 +38,6 @@ const OptionInfoRec intel_options[] = {
 	{OPTION_CRTC_PIXMAPS,	"PerCrtcPixmaps", OPTV_BOOLEAN,	{0},	0},
 	{OPTION_ASYNC_SWAP,	"ExperimentalAsyncSwap", OPTV_BOOLEAN, {0}, 0},
 	{OPTION_SNA_PRIME_SYNC, "ExperimentalPrimeSync", OPTV_BOOLEAN, {0}, 0},
-	{OPTION_REDUCE_FLUSHES, "ExperimentalReduceFlushes", OPTV_BOOLEAN, {0}, 0},
 	{OPTION_ENABLE_Y_SCANOUT, "EnableYTilingScanout", OPTV_BOOLEAN, {0}, 0},
 	{OPTION_ENABLE_Y_COLOR_TILING, "EnableYColorTiling", OPTV_BOOLEAN, {0}, 0},
 #endif
