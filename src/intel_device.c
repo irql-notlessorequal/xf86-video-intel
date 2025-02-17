@@ -78,7 +78,7 @@ struct intel_device {
 	int device_id;
 	int open_count;
 	int master_count;
-};
+} __attribute__((packed));
 
 static int intel_device_key = -1;
 

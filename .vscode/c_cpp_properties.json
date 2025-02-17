@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${default}",
-                "${workspaceFolder}/src"
+                "${workspaceFolder}/src",
+                "/usr/include/xorg"
             ],
             "compilerPath": "/usr/bin/clang",
             "cStandard": "c17",

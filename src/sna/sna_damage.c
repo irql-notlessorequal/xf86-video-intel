@@ -51,7 +51,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 struct sna_damage_box {
 	struct list list;
 	int size;
-} __attribute__((packed));
+} tightly_packed;
 
 static struct sna_damage *__freed_damage;
 

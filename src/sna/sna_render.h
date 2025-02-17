@@ -225,12 +225,14 @@ struct sna_copy_op {
 struct sna_render {
 	pthread_mutex_t lock;
 	pthread_cond_t wait;
-	int active;
+	unsigned int active;
 
 	int max_3d_size;
 	int max_3d_pitch;
 
-	unsigned prefer_gpu;
+	/* Only used in gen7_render.c */
+	unsigned int has_mitigations_active : 1;
+	unsigned int prefer_gpu : 4;
 #define PREFER_GPU_BLT 0x1
 #define PREFER_GPU_RENDER 0x2
 #define PREFER_GPU_SPANS 0x4
@@ -301,9 +303,6 @@ struct sna_render {
 		     PixmapPtr dst, struct kgem_bo *dst_bo,
 		     struct sna_copy_op *op);
 
-	/* Only used in gen7_render.c */
-	bool has_mitigations_active;
-
 	void (*flush)(struct sna *sna);
 	void (*reset)(struct sna *sna);
 	void (*fini)(struct sna *sna);
@@ -319,7 +318,7 @@ struct sna_render {
 		uint32_t color[1024];
 		int last;
 		int size;
-		int dirty;
+		unsigned int dirty : 1;
 	} solid_cache;
 
 	struct {

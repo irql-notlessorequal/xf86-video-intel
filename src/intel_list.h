@@ -112,8 +112,9 @@
  * head.
  */
 struct list {
-    struct list *next, *prev;
-};
+    struct list *next;
+	struct list *prev;
+} __attribute__((aligned));
 
 /**
  * Initialize the list as an empty list.

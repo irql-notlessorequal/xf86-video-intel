@@ -123,7 +123,6 @@ struct kgem {
 	unsigned wedged;
 	int fd;
 	unsigned gen;
-	unsigned int force_crocus_driver : 1;
 
 	uint32_t unique_id;
 
@@ -207,6 +206,8 @@ struct kgem {
 	uint32_t can_scanout_y :1;
 
 	uint32_t needs_dirtyfb :1;
+
+	unsigned int force_crocus_driver : 1;
 
 	uint16_t fence_max;
 	uint16_t half_cpu_cache_pages;
