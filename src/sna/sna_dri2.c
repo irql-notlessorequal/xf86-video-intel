@@ -576,7 +576,10 @@ sna_dri2_pixmap_update_bo(struct sna *sna, PixmapPtr pixmap, struct kgem_bo *bo)
 		sna->kgem.flush = 1;
 	assert(sna_pixmap(pixmap)->flush);
 
-	/* XXX DRI2InvalidateDrawable(&pixmap->drawable); */
+#if 0
+	/* XXX */
+	DRI2InvalidateDrawable(&pixmap->drawable);
+#endif
 }
 
 static DRI2Buffer2Ptr
@@ -3758,6 +3761,26 @@ static const char *dri_driver_name(struct sna *sna)
 	return s;
 }
 
+static int sna_dri2_get_param(ClientPtr client,
+	DrawablePtr pDrawable,
+	CARD64 param,
+	BOOL *is_param_recognized,
+	CARD64 *value)
+{
+	switch (param)
+	{
+		/**
+		 * Nothing of value came out of this extension,
+		 * disregard all calls to this.
+		 */
+		default:
+		{
+			*is_param_recognized = FALSE;
+			return FALSE;
+		}
+	}
+}
+
 bool sna_dri2_open(struct sna *sna, ScreenPtr screen)
 {
 	DRI2InfoRec info;
@@ -3800,13 +3823,15 @@ bool sna_dri2_open(struct sna *sna, ScreenPtr screen)
 #endif
 	info.CreateBuffer = sna_dri2_create_buffer;
 	info.DestroyBuffer = sna_dri2_destroy_buffer;
-
 	info.CopyRegion = sna_dri2_copy_region;
+
 #if DRI2INFOREC_VERSION >= 4
 	info.version = 4;
+
 	info.ScheduleSwap = sna_dri2_schedule_swap;
 	info.GetMSC = sna_dri2_get_msc;
 	info.ScheduleWaitMSC = sna_dri2_schedule_wait_msc;
+
 	info.numDrivers = 2;
 	info.driverNames = driverNames;
 	driverNames[0] = info.driverName;
@@ -3814,12 +3839,18 @@ bool sna_dri2_open(struct sna *sna, ScreenPtr screen)
 #endif
 
 #if DRI2INFOREC_VERSION >= 6
-	if (xorg_can_triple_buffer()) {
+	if (xorg_can_triple_buffer())
+	{
 		DBG(("%s: enabling Xorg triple buffering\n", __FUNCTION__));
 		info.version = 6;
 		info.SwapLimitValidate = sna_dri2_swap_limit_validate;
 		info.ReuseBufferNotify = sna_dri2_reuse_buffer;
 	}
+#endif
+
+#if DRI2INFOREC_VERSION >= 7
+	info.version = 7;
+	info.GetParam = sna_dri2_get_param;
 #endif
 
 #if DRI2INFOREC_VERSION >= 9

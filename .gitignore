@@ -79,3 +79,7 @@ core
 # For example, !report.pc overrides *.pc. See 'man gitignore'
 # 
 cscope*
+
+# IRQL fork
+.vscode/settings.json
+.vscode/c_cpp_properties.json
