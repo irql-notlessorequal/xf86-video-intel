@@ -297,19 +297,18 @@ struct sna {
 	bool enable_async_swap : 1;
 	/* Enables an optimization that probably doesn't even work at all still. */
 	bool enable_reduced_flushing : 1;
-	bool needs_shm_flush;
-	bool needs_dri_flush;
 
 	unsigned watch_shm_flush;
 	unsigned watch_dri_flush;
 	unsigned damage_event;
+	bool needs_shm_flush;
+	bool needs_dri_flush;
 
 	struct timeval timer_tv;
 	uint32_t timer_expire[NUM_TIMERS];
 	uint16_t timer_active;
 
-	/* Never permit a negative vblank interval. */
-	unsigned int vblank_interval;
+	int vblank_interval;
 
 	struct list flush_pixmaps;
 	struct list active_pixmaps;
@@ -476,8 +475,8 @@ struct sna {
 typedef struct _sna_pixmap_priv
 {
 	PixmapDirtyUpdatePtr dirty;
-	DrawablePtr secondary_src;
 	Bool defer_dirty_update;
+	DrawablePtr secondary_src;
 	Bool notify_on_damage;
 } sna_pixmap_priv_rec, *sna_pixmap_priv;
 

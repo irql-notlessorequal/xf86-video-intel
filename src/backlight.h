@@ -39,9 +39,8 @@ struct backlight {
 	char *iface;
 	enum backlight_type type;
 	int max;
+	int has_power;
 	int pid, fd;
-
-	unsigned int has_power : 1;
 };
 
 int backlight_exists(const char *iface);

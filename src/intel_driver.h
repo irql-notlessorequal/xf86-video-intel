@@ -144,7 +144,7 @@ struct intel_device_info {
 
 	/* Hardware is otherwise not supported. */
 	unsigned int force_ega : 1;
-} __attribute__((packed));
+};
 struct intel_device;
 
 int intel_entity_get_devid(int index);

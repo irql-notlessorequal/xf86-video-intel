@@ -7216,7 +7216,7 @@ sna_page_flip(struct sna *sna,
 		struct sna_crtc *crtc = config->crtc[i]->driver_private;
 		struct drm_mode_crtc_page_flip arg;
 		uint32_t crtc_offset;
-		bool fixup;
+		int fixup;
 
 		DBG(("%s: crtc %d id=%d, crtc=%d active? %d\n",
 		     __FUNCTION__, i, __sna_crtc_id(crtc), __sna_crtc_index(crtc), crtc->bo != NULL));

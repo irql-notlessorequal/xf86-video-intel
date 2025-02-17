@@ -128,7 +128,7 @@ struct sna_video {
 	RegionRec clip;
 
 	int SyncToVblank;	/* -1: auto, 0: off, 1: on */
-	bool AlwaysOnTop;
+	int AlwaysOnTop;
 };
 
 struct sna_video_frame {
