@@ -319,7 +319,7 @@ struct sna_render {
 		uint32_t color[1024];
 		int last;
 		int size;
-		int dirty;
+		unsigned int dirty : 1;
 	} solid_cache;
 
 	struct {
