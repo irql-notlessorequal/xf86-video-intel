@@ -306,7 +306,8 @@ struct sna {
 	uint32_t timer_expire[NUM_TIMERS];
 	uint16_t timer_active;
 
-	int vblank_interval;
+	/* Never permit a negative vblank interval. */
+	unsigned int vblank_interval;
 
 	struct list flush_pixmaps;
 	struct list active_pixmaps;
