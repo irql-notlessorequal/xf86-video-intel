@@ -8,12 +8,16 @@
 struct sna_damage {
 	BoxRec extents;
 	pixman_region16_t region;
+	
 	enum sna_damage_mode {
 		DAMAGE_ADD = 0,
 		DAMAGE_SUBTRACT,
 		DAMAGE_ALL,
 	} mode;
-	int remain, dirty;
+
+	unsigned int dirty : 1;
+
+	int remain;
 	BoxPtr box;
 	struct {
 		struct list list;
