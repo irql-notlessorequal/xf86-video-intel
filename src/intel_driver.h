@@ -129,7 +129,8 @@ struct xf86_platform_device;
 #define PCI_CHIP_HASWELL_CRW_E_GT3	0x0D2E
 
 struct intel_device_info {
-	int gen;
+	/* 0-255 is more than enough. */
+	unsigned int gen : 8;
 
 	/* prefers_32k_alignment was removed since I have no logical clue on how to implement Software Tiling in Intel hardware. */
 
@@ -144,7 +145,7 @@ struct intel_device_info {
 
 	/* Hardware is otherwise not supported. */
 	unsigned int force_ega : 1;
-};
+} __attribute__((aligned));
 struct intel_device;
 
 int intel_entity_get_devid(int index);
