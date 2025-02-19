@@ -33,6 +33,21 @@
 #include <pixman.h>
 
 #include "blt_sse2.h"
+#include "blt_avx2.h"
+
+#if __x86_64__
+#define have_sse2() 1
+#else
+static bool have_sse2(void)
+{
+	static int sse2_present = -1;
+
+	if (sse2_present == -1)
+		sse2_present = sna_cpu_detect() & SSE2;
+
+	return sse2_present;
+}
+#endif
 
 fast void
 memcpy_blt(const void *src, void *dst, int bpp,
@@ -571,14 +586,25 @@ void choose_memcpy_tiled_x(struct kgem *kgem, int swizzling, unsigned cpu)
 		break;
 	case I915_BIT_6_SWIZZLE_NONE:
 		DBG(("%s: no swizzling\n", __FUNCTION__));
+#if defined(avx2)
+		if (cpu & AVX2)
+		{
+			kgem->memcpy_to_tiled_x = memcpy_to_tiled_x__swizzle_0__avx2;
+			kgem->memcpy_from_tiled_x = memcpy_from_tiled_x__swizzle_0__avx2;
+			kgem->memcpy_between_tiled_x = memcpy_between_tiled_x__swizzle_0__avx2;
+		} 
+		else
+#endif
 #if defined(sse2)
-		if (cpu & SSE2) {
+		if (cpu & SSE2)
+		{
 			kgem->memcpy_to_tiled_x = memcpy_to_tiled_x__swizzle_0__sse2;
 			kgem->memcpy_from_tiled_x = memcpy_from_tiled_x__swizzle_0__sse2;
 			kgem->memcpy_between_tiled_x = memcpy_between_tiled_x__swizzle_0__sse2;
-		} else
+		} 
+		else
 #endif
-	       	{
+	    {
 			kgem->memcpy_to_tiled_x = memcpy_to_tiled_x__swizzle_0;
 			kgem->memcpy_from_tiled_x = memcpy_from_tiled_x__swizzle_0;
 			kgem->memcpy_between_tiled_x = memcpy_between_tiled_x__swizzle_0;
