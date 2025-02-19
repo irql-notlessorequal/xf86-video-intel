@@ -4,20 +4,6 @@
 #pragma GCC optimize("Ofast")
 #include <xmmintrin.h>
 
-#if __x86_64__
-#define have_sse2() 1
-#else
-static bool have_sse2(void)
-{
-	static int sse2_present = -1;
-
-	if (sse2_present == -1)
-		sse2_present = sna_cpu_detect() & SSE2;
-
-	return sse2_present;
-}
-#endif
-
 static force_inline __m128i
 xmm_create_mask_32(uint32_t mask)
 {
@@ -114,7 +100,7 @@ to_sse16(uint8_t *dst, const uint8_t *src)
 	xmm_save_128((__m128i*)dst, xmm_load_128u((const __m128i*)src));
 }
 
-static void to_memcpy(uint8_t *dst, const uint8_t *src, unsigned len)
+static void to_memcpy_sse2(uint8_t *dst, const uint8_t *src, unsigned len)
 {
 	assert(len);
 	if ((uintptr_t)dst & 15) {
@@ -233,7 +219,7 @@ memcpy_to_tiled_x__swizzle_0__sse2(const void *src, void *dst, int bpp,
 		dst_y++;
 
 		if (length_x) {
-			to_memcpy(tile_row + offset_x, src_row, length_x);
+			to_memcpy_sse2(tile_row + offset_x, src_row, length_x);
 
 			tile_row += tile_size;
 			src_row = (const uint8_t *)src_row + length_x;
@@ -249,7 +235,7 @@ memcpy_to_tiled_x__swizzle_0__sse2(const void *src, void *dst, int bpp,
 		}
 		if (w) {
 			assert(((uintptr_t)tile_row & (tile_width - 1)) == 0);
-			to_memcpy(assume_aligned(tile_row, tile_width),
+			to_memcpy_sse2(assume_aligned(tile_row, tile_width),
 				  src_row, w);
 		}
 	}
@@ -572,7 +558,7 @@ memcpy_between_tiled_x__swizzle_0__sse2(const void *src, void *dst, int bpp,
 		src_y++;
 
 		if (lx) {
-			to_memcpy(dst_row + ox, src_row + ox, lx);
+			to_memcpy_sse2(dst_row + ox, src_row + ox, lx);
 			dst_row += tile_size;
 			src_row += tile_size;
 			w -= lx;
@@ -590,7 +576,7 @@ memcpy_between_tiled_x__swizzle_0__sse2(const void *src, void *dst, int bpp,
 		if (w) {
 			assert(((uintptr_t)dst_row & (tile_width - 1)) == 0);
 			assert(((uintptr_t)src_row & (tile_width - 1)) == 0);
-			to_memcpy(assume_aligned(dst_row, tile_width),
+			to_memcpy_sse2(assume_aligned(dst_row, tile_width),
 				  assume_aligned(src_row, tile_width),
 				  w);
 		}
