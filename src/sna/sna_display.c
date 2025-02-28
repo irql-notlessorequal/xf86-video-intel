@@ -7288,6 +7288,8 @@ update_scanout:
 			xf86DrvMsg(sna->scrn->scrnIndex, X_ERROR,
 				"%s blocked the driver from switching modifiers during an async page flip, tell a developer NOW!\n", __FUNCTION__);
 			xf86DrvMsg(sna->scrn->scrnIndex, X_DEBUG, "%s: attempted tiling: %d, CRTC tiling: %d\n", __FUNCTION__, bo->tiling, crtc->bo->tiling);
+			
+			sna->flags &= SNA_HAS_ASYNC_FLIP;
 			goto error;
 		}
 
@@ -7343,7 +7345,6 @@ error:
 			if (count || crtc->bo == bo)
 				sna_mode_restore(sna);
 
-			sna->flags &= ~(data ? SNA_HAS_FLIP : SNA_HAS_ASYNC_FLIP);
 			count = 0;
 			break;
 		}
