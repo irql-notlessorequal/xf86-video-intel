@@ -7283,13 +7283,12 @@ update_scanout:
 		 * 
 		 * The kernel DOES NOT allow commiting different modifiers.
 		 */
-		if (unlikely(async && bo->tiling != crtc->bo->tiling))
+		if (async && unlikely(bo->tiling != crtc->bo->tiling))
 		{
 			xf86DrvMsg(sna->scrn->scrnIndex, X_ERROR,
-				"%s blocked the driver from switching modifiers during an async page flip, tell a developer NOW!\n", __FUNCTION__);
-			xf86DrvMsg(sna->scrn->scrnIndex, X_DEBUG, "%s: attempted tiling: %d, CRTC tiling: %d\n", __FUNCTION__, bo->tiling, crtc->bo->tiling);
-			
-			sna->flags &= SNA_HAS_ASYNC_FLIP;
+				"%s tried switching modifiers during an async page flip, tell a developer NOW!\n", __FUNCTION__);
+			xf86DrvMsg(sna->scrn->scrnIndex, X_DEBUG, "%s: attempted tiling: %s, CRTC tiling: %s\n", __FUNCTION__, 
+				tiling_to_str(bo->tiling), tiling_to_str(crtc->bo->tiling));
 			goto error;
 		}
 
@@ -7345,6 +7344,7 @@ error:
 			if (count || crtc->bo == bo)
 				sna_mode_restore(sna);
 
+			sna->flags &= ~(data ? SNA_HAS_FLIP : SNA_HAS_ASYNC_FLIP);
 			count = 0;
 			break;
 		}

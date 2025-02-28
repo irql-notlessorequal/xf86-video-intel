@@ -1489,4 +1489,24 @@ static inline bool prefer_y_tiling_scanout(struct sna *sna)
 	return should_prefer_y_scanout;
 }
 
+static inline char* tiling_to_str(int tiling)
+{
+	switch (tiling)
+	{
+		case I915_TILING_NONE:
+			return "I915_TILING_NONE";
+		case I915_TILING_X:
+			return "I915_TILING_X";
+		case I915_TILING_Y:
+			return "I915_TILING_Y";
+
+		default:
+		{
+			char buf[16];
+			snprintf(buf, sizeof (buf), "%d", tiling);
+			return buf;
+		}
+	}
+}
+
 #endif /* _SNA_H */
