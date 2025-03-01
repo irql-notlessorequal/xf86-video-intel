@@ -43,10 +43,9 @@ documentation can be read with the following command:
 
 1. Fix for screen freezing if using PRIME and a secondary graphics card.
 2. Restoration and clean up of legacy options.
-3. Experimental implementation (stubs at the moment) of functions required for PRIME synchronization.
-4. Experimental Y-tiling preference. (in theory better performance, not validated)
-5. Implementation of `CreateBuffer2`, `DestroyBuffer2` and `CopyRegion2` within SNA and UXA.
-6. Improved performance with the BLT (blitter) engine on Gen 7.x (Ivy Bridge/Haswell) era hardware when mitigations are disabled.
+3. Internal Y-tiling preference by default (Ivy Bridge and newer)
+4. Implementation of `CreateBuffer2`, `DestroyBuffer2` and `CopyRegion2` within SNA and UXA.
+5. Improved performance with the BLT (blitter) engine on Gen 7.x (Ivy Bridge/Haswell) era hardware when mitigations are disabled.
 
 ## Known issues.
 
@@ -59,12 +58,6 @@ Fixed in `master` branch as of November 7th 2024.
 Generation 11 (Ice Lake) and newer graphics are not supported.
 
 There are no plans to address this, a solution is to use the `modesetting` driver included within XOrg.
-
-### Untested Y-tiling performance.
-
-If you wish to disable this, set the "PreferYTiling" option to "false".
-
-Please create an issue on the repository's issue tracker if you need to disable it.
 
 ### Missing symbols (i.e. `vbeFree`)
 
