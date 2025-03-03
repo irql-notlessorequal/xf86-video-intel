@@ -299,6 +299,56 @@ free_bo:
 	return NULL;
 }
 
+static PixmapPtr sna_dri3_pixmap_from_fds(ScreenPtr screen,
+										  CARD8 num_fds,
+										  const int *fds,
+										  CARD16 width,
+										  CARD16 height,
+										  const CARD32 *strides,
+										  const CARD32 *offsets,
+										  CARD8 depth,
+										  CARD8 bpp,
+										  CARD64 modifier)
+{
+	struct sna *sna = to_sna_from_screen(screen);
+	struct kgem_bo *bo;
+	int sna_modifier;
+
+	if (!num_fds)
+		return NULL;
+
+	if (width > INT16_MAX || height > INT16_MAX)
+		return NULL;
+
+	if (depth < 8)
+		return NULL;
+
+	switch (bpp)
+	{
+
+	case 8:
+	case 16:
+	case 32:
+		break;
+
+	default:
+		return NULL;
+
+	}
+
+	switch (modifier)
+	{
+		default:
+			sna_modifier = I915_TILING_NONE;
+			break;
+	}
+
+	for (uint8_t fd_idx = 0; fd_idx < num_fds; fd_idx++)
+	{
+		const int fd = &fds[fd_idx];
+	}
+}
+
 static int sna_dri3_fd_from_pixmap(ScreenPtr screen,
 				   PixmapPtr pixmap,
 				   CARD16 *stride,
@@ -370,17 +420,34 @@ static int sna_dri3_fd_from_pixmap(ScreenPtr screen,
 	return fd;
 }
 
+static int sna_dri3_fds_from_pixmap(ScreenPtr screen,
+	PixmapPtr pixmap,
+	int *fds,
+	uint32_t *strides,
+	uint32_t *offsets,
+	uint64_t *modifier)
+{
+	struct sna *sna = to_sna_from_screen(screen);
+	struct sna_pixmap *priv;
+	struct kgem_bo *bo = NULL;
+
+	int expected_fds = 0;
+}
+
 static dri3_screen_info_rec sna_dri3_info = {
 	.version = DRI3_SCREEN_INFO_VERSION,
 
 	/* version zero */
-
 	.open = sna_dri3_open_device,
 	.pixmap_from_fd = sna_dri3_pixmap_from_fd,
 	.fd_from_pixmap = sna_dri3_fd_from_pixmap,
 
 	/* version one */
 	.open_client = sna_dri3_open_client,
+	
+	/* version two */
+	.pixmap_from_fds = sna_dri3_pixmap_from_fds,
+	.fds_from_pixmap = sna_dri3_fds_from_pixmap
 };
 
 bool sna_dri3_open(struct sna *sna, ScreenPtr screen)
