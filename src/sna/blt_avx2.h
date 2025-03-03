@@ -25,7 +25,7 @@
 #pragma GCC optimize("Ofast")
 #include <immintrin.h>
 
-static void avx2_memcpy(void *pvDest, void *pvSrc, size_t nBytes)
+static void avx2_memcpy(void *pvDest, const void *pvSrc, size_t nBytes)
 {
 	assert(nBytes % 32 == 0);
 	assert(((intptr_t)pvDest & 31) == 0);
@@ -40,7 +40,7 @@ static void avx2_memcpy(void *pvDest, void *pvSrc, size_t nBytes)
 	_mm_sfence();
 }
 
-static void to_memcpy_avx2(uint8_t *dst, const uint8_t *src, unsigned len)
+static void to_memcpy_avx2(void *dst, const void *src, unsigned len)
 {
 	assert(len);
 
@@ -50,8 +50,11 @@ static void to_memcpy_avx2(uint8_t *dst, const uint8_t *src, unsigned len)
 	 */
 	if (len < 8)
 	{
+		unsigned char *d = dst;
+		const unsigned char *s = src;
+
 		for (int i = 0; i < len; ++i)
-			*dst++ = *src++;
+			*d++ = *s++;
 		return;
 	}
 
@@ -63,7 +66,7 @@ static void to_memcpy_avx2(uint8_t *dst, const uint8_t *src, unsigned len)
 		((uintptr_t)src & 31) == 0 &&
 		(len % 256) == 0)
 	{
-		avx2_memcpy(&dst, &src, len);
+		avx2_memcpy(dst, src, len);
 		return;
 	}
 
