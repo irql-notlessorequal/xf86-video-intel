@@ -3748,7 +3748,7 @@ static const char *dri_driver_name(struct sna *sna)
 		else if (sna->kgem.gen < 040)
 			return "i915";
 #ifndef INTEL_USE_LEGACY_DRIVERS
-		else if (sna->kgem.gen < 0100 || sna->kgem.force_crocus_driver)
+		else if (sna->kgem.gen < 0100 || sna->info->force_crocus_driver)
 			return "crocus";
 		else
 			return "iris";

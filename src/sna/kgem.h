@@ -53,16 +53,16 @@ struct kgem_bo {
 	struct list request;
 	struct list vma;
 
+	struct kgem_bo_binding {
+		uint16_t offset;
+		uint32_t format;
+		struct kgem_bo_binding *next;
+	} binding;
+
 	void *map__cpu;
 	void *map__gtt;
 	void *map__wc;
 #define MAP(ptr) ((void*)((uintptr_t)(ptr) & ~3))
-
-	struct kgem_bo_binding {
-		struct kgem_bo_binding *next;
-		uint32_t format;
-		uint16_t offset;
-	} binding;
 
 	uint64_t presumed_offset;
 	uint32_t unique_id;
@@ -119,7 +119,8 @@ typedef void (*memcpy_box_func)(const void *src, void *dst, int bpp,
 				int16_t dst_x, int16_t dst_y,
 				uint16_t width, uint16_t height);
 
-struct kgem {
+struct kgem
+{
 	unsigned wedged;
 	int fd;
 	unsigned gen;
@@ -133,6 +134,7 @@ struct kgem {
 	uint16_t nreloc__self;
 	uint16_t nfence;
 	uint16_t batch_size;
+	uint16_t fence_max;
 
 	uint32_t *batch;
 
@@ -171,52 +173,49 @@ struct kgem {
 #define I915_EXEC_SECURE (1<<9)
 #define LOCAL_EXEC_OBJECT_WRITE (1<<2)
 
-	uint32_t flush:1;
-	uint32_t need_expire:1;
-	uint32_t need_purge:1;
-	uint32_t need_retire:1;
-	uint32_t need_throttle:1;
-	uint32_t needs_semaphore:1;
-	uint32_t needs_reservation:1;
-	uint32_t scanout_busy:1;
-	uint32_t busy:1;
+	bool flush;
+	bool need_expire;
+	bool need_purge;
+	bool need_retire;
+	bool need_throttle;
+	bool needs_semaphore;
+	bool needs_reservation;
+	bool scanout_busy;
+	bool busy;
 
-	uint32_t has_create2 :1;
-	uint32_t has_userptr :1;
-	uint32_t has_blt :1;
-	uint32_t has_relaxed_fencing :1;
-	uint32_t has_relaxed_delta :1;
-	uint32_t has_semaphores :1;
-	uint32_t has_secure_batches :1;
-	uint32_t has_pinned_batches :1;
-	uint32_t has_caching :1;
-	uint32_t has_coherent_mmap_gtt :1;
-	uint32_t has_full_ppgtt :1;
-	uint32_t has_llc :1;
-	uint32_t has_wt :1;
-	uint32_t has_no_reloc :1;
-	uint32_t has_handle_lut :1;
-	uint32_t has_wc_mmap :1;
-	uint32_t has_dirtyfb :1;
+	bool has_create2 : 1;
+	bool has_userptr : 1;
+	bool has_blt : 1;
+	bool has_relaxed_fencing : 1;
+	bool has_relaxed_delta : 1;
+	bool has_semaphores : 1;
+	bool has_secure_batches : 1;
+	bool has_pinned_batches : 1;
+	bool has_caching : 1;
+	bool has_coherent_mmap_gtt : 1;
+	bool has_full_ppgtt : 1;
+	bool has_llc : 1;
+	bool has_wt : 1;
+	bool has_no_reloc : 1;
+	bool has_handle_lut : 1;
+	bool has_wc_mmap : 1;
+	bool has_dirtyfb : 1;
 
-	uint32_t can_fence :1;
-	uint32_t can_blt_cpu :1;
-	uint32_t can_blt_y :1;
-	uint32_t can_render_y :1;
-	uint32_t can_scanout_y :1;
+	bool can_fence : 1;
+	bool can_blt_cpu : 1;
+	bool can_blt_y : 1;
+	bool can_render_y : 1;
+	bool can_scanout_y : 1;
 
-	uint32_t needs_dirtyfb :1;
+	bool needs_dirtyfb : 1;
 
-	unsigned int force_crocus_driver : 1;
-
-	uint16_t fence_max;
-	uint16_t half_cpu_cache_pages;
 	uint32_t aperture_total, aperture_high, aperture_low, aperture_mappable, aperture_fenceable;
 	uint32_t aperture, aperture_fenced, aperture_max_fence;
 	uint32_t max_upload_tile_size, max_copy_tile_size;
 	uint32_t max_gpu_size, max_cpu_size;
 	uint32_t large_object_size, max_object_size;
 	uint32_t buffer_size;
+	uint16_t half_cpu_cache_pages;
 
 	void (*context_switch)(struct kgem *kgem, int new_mode);
 	void (*retire)(struct kgem *kgem);
@@ -254,7 +253,7 @@ struct kgem {
 #define KGEM_EXEC_SIZE(K) (int)(ARRAY_SIZE((K)->exec)-KGEM_EXEC_RESERVED)
 #define KGEM_RELOC_SIZE(K) (int)(ARRAY_SIZE((K)->reloc)-KGEM_RELOC_RESERVED)
 
-void kgem_init(struct kgem *kgem, int fd, struct pci_device *dev, unsigned gen, unsigned int force_crocus_driver);
+void kgem_init(struct kgem *kgem, int fd, struct pci_device *dev, unsigned gen);
 void kgem_reset(struct kgem *kgem);
 
 struct kgem_bo *kgem_create_map(struct kgem *kgem,
