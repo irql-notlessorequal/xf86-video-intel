@@ -70,14 +70,16 @@
 #include "intel_driver.h"
 #include "fd.h"
 
-struct intel_device {
-	int idx;
+struct intel_device
+{
 	char *master_node;
 	char *render_node;
-	int fd;
+
 	int device_id;
-	int open_count;
+	int fd;
+	int idx;
 	int master_count;
+	int open_count;
 };
 
 static int intel_device_key = -1;
