@@ -18381,7 +18381,7 @@ bool sna_accel_init(ScreenPtr screen, struct sna *sna)
 		return false;
 
 	/* Kernel enables mitigations for affected generations by default. */
-	sna->render.has_mitigations_active = true;
+	sna->mode.has_mitigations_active = true;
 
 	backend = no_render_init(sna);
 	if (sna_option_accel_none(sna)) {
@@ -18428,7 +18428,7 @@ bool sna_accel_init(ScreenPtr screen, struct sna *sna)
 
 	/* Tell Ivy Bridge/Baytrail/Haswell users if the old BLT logic was re-enabled */
 	if (sna->kgem.gen >= 070 && sna->kgem.gen < 0100) {
-		xf86DrvMsg(sna->scrn->scrnIndex, X_INFO, "SNA: Full BLT mode: %s\n", (sna->render.has_mitigations_active ? "DISABLED" : "ENABLED"));
+		xf86DrvMsg(sna->scrn->scrnIndex, X_INFO, "SNA: Full BLT mode: %s\n", (sna->mode.has_mitigations_active ? "DISABLED" : "ENABLED"));
 	}
 
 	return true;

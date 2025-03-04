@@ -27,7 +27,8 @@ struct sna_composite_rectangles {
 	int16_t width, height;
 };
 
-struct sna_composite_op {
+struct sna_composite_op
+{
 	fastcall void (*blt)(struct sna *sna, const struct sna_composite_op *op,
 			     const struct sna_composite_rectangles *r);
 	fastcall void (*box)(struct sna *sna,
@@ -43,10 +44,16 @@ struct sna_composite_op {
 
 	uint32_t op;
 
-	struct {
+	bool is_affine;
+	bool has_component_alpha;
+	bool need_magic_ca_pass;
+	bool rb_reversed;
+
+	struct
+	{
 		PixmapPtr pixmap; /* XXX */
-		CARD32 format;
 		struct kgem_bo *bo;
+		CARD32 format;
 		int16_t x, y;
 		uint16_t width, height;
 	} dst;
@@ -85,10 +92,6 @@ struct sna_composite_op {
 			} gen3;
 		} u;
 	} src, mask;
-	uint32_t is_affine : 1;
-	uint32_t has_component_alpha : 1;
-	uint32_t need_magic_ca_pass : 1;
-	uint32_t rb_reversed : 1;
 
 	int16_t floats_per_vertex;
 	int16_t floats_per_rect;
@@ -106,20 +109,23 @@ struct sna_composite_op {
 	} redirect;
 
 	union {
-		struct sna_blt_state {
+		struct sna_blt_state
+		{
 			PixmapPtr src_pixmap;
 			int16_t sx, sy;
 
-			uint32_t inplace :1;
-			uint32_t overwrites:1;
+			uint32_t cmd;
+			uint32_t br13;
+			uint32_t pixel;
+
 			uint32_t bpp : 6;
 			uint32_t alu : 4;
 
-			uint32_t cmd;
-			uint32_t br13;
-			uint32_t pitch[2];
-			uint32_t pixel;
+			bool inplace;
+			bool overwrites;
+
 			struct kgem_bo *bo[2];
+			uint32_t pitch[2];
 		} blt;
 
 		struct {
@@ -301,9 +307,6 @@ struct sna_render {
 		     PixmapPtr dst, struct kgem_bo *dst_bo,
 		     struct sna_copy_op *op);
 
-	/* Only used in gen7_render.c */
-	bool has_mitigations_active;
-
 	void (*flush)(struct sna *sna);
 	void (*reset)(struct sna *sna);
 	void (*fini)(struct sna *sna);
@@ -313,20 +316,22 @@ struct sna_render {
 		struct kgem_bo *bo[256+7];
 	} alpha_cache;
 
-	struct sna_solid_cache {
+	struct sna_solid_cache
+	{
 		struct kgem_bo *cache_bo;
 		struct kgem_bo *bo[1024];
 		uint32_t color[1024];
 		int last;
 		int size;
-		unsigned int dirty : 1;
+		bool dirty;
 	} solid_cache;
 
 	struct {
-		struct sna_gradient_cache {
+		struct sna_gradient_cache
+		{
 			struct kgem_bo *bo;
-			int nstops;
 			PictGradientStop *stops;
+			int nstops;
 		} cache[GRADIENT_CACHE_SIZE];
 		int size;
 	} gradient_cache;
@@ -357,16 +362,15 @@ struct sna_render {
 
 struct gen2_render_state {
 	uint32_t target;
-	bool need_invariant;
 	uint32_t logic_op_enabled;
 	uint32_t ls1, ls2, vft;
 	uint32_t diffuse;
 	uint32_t specular;
+	bool need_invariant;
 };
 
 struct gen3_render_state {
 	uint32_t current_dst;
-	bool need_invariant;
 	uint32_t tex_count;
 	uint32_t last_drawrect_limit;
 	uint32_t last_target;
@@ -380,6 +384,8 @@ struct gen3_render_state {
 	uint16_t last_vertex_offset;
 	uint16_t floats_per_vertex;
 	uint16_t last_floats_per_vertex;
+
+	bool need_invariant;
 
 	uint32_t tex_map[4];
 	uint32_t tex_handle[2];
@@ -453,9 +459,10 @@ enum {
 };
 
 struct gen6_render_state {
-	unsigned gt;
 	const struct gt_info *info;
 	struct kgem_bo *general_bo;
+
+	unsigned gt;
 
 	uint32_t vs_state;
 	uint32_t sf_state;
@@ -510,9 +517,10 @@ enum {
 };
 
 struct gen7_render_state {
-	unsigned gt;
 	const struct gt_info *info;
 	struct kgem_bo *general_bo;
+
+	unsigned gt;
 
 	uint32_t vs_state;
 	uint32_t sf_state;
@@ -569,9 +577,10 @@ enum {
 };
 
 struct gen8_render_state {
-	unsigned gt;
 	const struct gt_info *info;
 	struct kgem_bo *general_bo;
+
+	unsigned gt;
 
 	uint32_t vs_state;
 	uint32_t sf_state;
@@ -629,9 +638,10 @@ enum {
 };
 
 struct gen9_render_state {
-	unsigned gt;
 	const struct gt_info *info;
 	struct kgem_bo *general_bo;
+
+	unsigned gt;
 
 	uint32_t vs_state;
 	uint32_t sf_state;
