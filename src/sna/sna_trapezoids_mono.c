@@ -39,9 +39,10 @@
 
 #include <mipict.h>
 
-struct quorem {
-	int32_t quo;
+struct quorem
+{
 	int64_t rem;
+	int32_t quo;
 };
 
 struct mono_edge {
