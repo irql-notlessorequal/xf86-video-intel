@@ -292,15 +292,16 @@ struct sna {
 #define AVX 0x80
 #define AVX2 0x100
 
-	bool ignore_copy_area : 1;
+	bool ignore_copy_area;
 	/* Enables an unimplemented DRI2 swap extension. */
-	bool enable_async_swap : 1;
+	bool enable_async_swap;
+
+	bool needs_shm_flush;
+	bool needs_dri_flush;
 
 	unsigned watch_shm_flush;
 	unsigned watch_dri_flush;
 	unsigned damage_event;
-	bool needs_shm_flush;
-	bool needs_dri_flush;
 
 	struct timeval timer_tv;
 	uint32_t timer_expire[NUM_TIMERS];
