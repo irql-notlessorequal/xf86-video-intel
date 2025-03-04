@@ -376,37 +376,41 @@ struct sna {
 		void *scratch;
 	} cursor;
 
-	struct sna_dri2 {
-		bool available : 1;
-		bool enable : 1;
-		bool open : 1;
-
+	struct sna_dri2
+	{
 #if HAVE_DRI2
 		void *flip_pending;
 		unsigned client_count;
 #endif
+
+		bool available : 1;
+		bool enable : 1;
+		bool open : 1;
 	} dri2;
 
-	struct sna_dri3 {
-		bool available :1;
+	struct sna_dri3
+	{
+#if HAVE_DRI3
+		struct list pixmaps;
+		SyncScreenCreateFenceFunc create_fence;
+#endif
+
+		bool available : 1;
 		bool override : 1;
 		bool enable : 1;
-		bool open :1;
-
-#if HAVE_DRI3
-		SyncScreenCreateFenceFunc create_fence;
-		struct list pixmaps;
-#endif
+		bool open : 1;
 	} dri3;
 
-	struct sna_present {
-		bool available;
-		bool open;
+	struct sna_present
+	{
 #if HAVE_PRESENT
 		struct list vblank_queue;
-		uint64_t unflip;
 		void *freed_info;
+		uint64_t unflip;
 #endif
+
+		bool available;
+		bool open;
 	} present;
 
 	struct sna_xv {
