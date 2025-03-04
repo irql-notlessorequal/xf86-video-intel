@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #ifndef INTEL_DRIVER_H
 #define INTEL_DRIVER_H
 
@@ -128,24 +130,20 @@ struct xf86_platform_device;
 #define PCI_CHIP_HASWELL_CRW_E_GT2	0x0D1E
 #define PCI_CHIP_HASWELL_CRW_E_GT3	0x0D2E
 
-struct intel_device_info {
+struct intel_device_info
+{
 	/* 0-255 is more than enough. */
-	unsigned int gen : 8;
-
-	/* prefers_32k_alignment was removed since I have no logical clue on how to implement Software Tiling in Intel hardware. */
+	uint8_t gen;
 
 	/* These iGPUs should work fine with Y-tiling (Skylake and newer can even do scan-out) */
-	unsigned int prefer_y_tiling : 1;
+	bool prefer_y_tiling;
 
 	/* Cherryview is an outlier that isn't supported by the modern Iris driver. */
-	unsigned int force_crocus_driver : 1;
-
-	/* Not all Intel hardware is capable enough to run GLAMOR, flag hardware that can do so. */
-	unsigned int allow_ega : 1;
+	bool force_crocus_driver;
 
 	/* Hardware is otherwise not supported. */
-	unsigned int force_ega : 1;
-} __attribute__((aligned));
+	bool force_ega;
+};
 struct intel_device;
 
 int intel_entity_get_devid(int index);
