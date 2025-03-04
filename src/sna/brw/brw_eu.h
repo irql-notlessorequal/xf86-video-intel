@@ -1161,29 +1161,32 @@ struct brw_indirect {
 #define BRW_EU_MAX_INSN_STACK 5
 #define BRW_EU_MAX_INSN 10000
 
-struct brw_compile {
-	struct brw_instruction *store;
-	unsigned nr_insn;
-
+struct brw_compile
+{
 	int gen;
+	int if_stack_depth;
+	int if_stack_array_size;
 
-	/* Allow clients to push/pop instruction state:
-	*/
-	struct brw_instruction stack[BRW_EU_MAX_INSN_STACK];
-	bool compressed_stack[BRW_EU_MAX_INSN_STACK];
-	struct brw_instruction *current;
-
-	unsigned flag_value;
+	unsigned int nr_insn;
+	unsigned int flag_value;
+	
 	bool single_program_flow;
 	bool compressed;
+
+	bool compressed_stack[BRW_EU_MAX_INSN_STACK];
+
+	struct brw_instruction *store;
+	struct brw_instruction *current;
 
 	/* Control flow stacks:
 	 * - if_stack contains IF and ELSE instructions which must be patched
 	 *   (and popped) once the matching ENDIF instruction is encountered.
 	 */
 	struct brw_instruction **if_stack;
-	int if_stack_depth;
-	int if_stack_array_size;
+
+	/* Allow clients to push/pop instruction state:
+	*/
+	struct brw_instruction stack[BRW_EU_MAX_INSN_STACK];
 };
 
 static inline int type_sz(unsigned type)
