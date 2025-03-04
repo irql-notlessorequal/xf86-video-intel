@@ -110,7 +110,8 @@ enum dri_type {
 	DRI_ACTIVE
 };
 
-typedef struct intel_screen_private {
+typedef struct intel_screen_private
+{
 	ScrnInfoPtr scrn;
 	struct intel_device *dev;
 	int cpp;
@@ -133,35 +134,42 @@ typedef struct intel_screen_private {
 	unsigned int batch_emit_start;
 	/** Number of bytes to be emitted in the current BEGIN_BATCH. */
 	uint32_t batch_emitting;
-	dri_bo *batch_bo, *last_batch_bo[2];
-	/** Whether we're in a section of code that can't tolerate flushing */
-	Bool in_batch_atomic;
 	/** Ending batch_used that was verified by intel_start_batch_atomic() */
 	int batch_atomic_limit;
+	/**  */
+	dri_bo *batch_bo;
+	dri_bo *last_batch_bo[2];
+	/**  */
 	struct list batch_pixmaps;
 	drm_intel_bo *wa_scratch_bo;
 	OsTimerPtr cache_expire;
 #endif
 
-	/* For Xvideo */
-	Bool use_overlay;
 #ifdef INTEL_XVMC
-	/* For XvMC */
+	/* For XvMC, must be a 4-byte bool */
 	Bool XvMCEnabled;
 #endif
 
-	CreateScreenResourcesProcPtr CreateScreenResources;
+#if USE_UXA
+	/** Whether we're in a section of code that can't tolerate flushing */
+	bool in_batch_atomic;
+#endif
 
-	Bool shadow_present;
+	/* For Xvideo */
+	bool use_overlay;
+	bool overlayOn;
+	bool swapbuffers_wait;
+	bool has_relaxed_fencing;
+	bool shadow_present;
+	bool need_sync;
+
+	CreateScreenResourcesProcPtr CreateScreenResources;
 
 	unsigned int tiling;
 #define INTEL_TILING_FB		0x1
 #define INTEL_TILING_2D		0x2
 #define INTEL_TILING_3D		0x4
 #define INTEL_TILING_ALL (~0)
-
-	Bool swapbuffers_wait;
-	Bool has_relaxed_fencing;
 
 	int Chipset;
 	EntityInfoPtr pEnt;
@@ -182,7 +190,6 @@ typedef struct intel_screen_private {
 	struct _UxaDriver *uxa_driver;
 	int uxa_flags;
 #endif
-	Bool need_sync;
 	int accel_pixmap_offset_alignment;
 	int accel_max_x;
 	int accel_max_y;
@@ -190,16 +197,18 @@ typedef struct intel_screen_private {
 	int max_gtt_map_size;
 	int max_tiling_size;
 
-	Bool XvDisabled;	/* Xv disabled in PreInit. */
-	Bool XvEnabled;		/* Xv enabled for this generation. */
-	Bool XvPreferOverlay;
+	bool XvEnabled;		/* Xv enabled for this generation. */
+	bool XvPreferOverlay;
+
+	bool needs_3d_invariant;
+	bool needs_render_state_emit;
+	bool needs_render_vertex_emit;
 
 	int colorKey;
 	XF86VideoAdaptorPtr adaptor;
 #if !HAVE_NOTIFY_FD
 	ScreenBlockHandlerProcPtr BlockHandler;
 #endif
-	Bool overlayOn;
 
 	struct {
 		drm_intel_bo *gen4_vs_bo;
@@ -224,9 +233,6 @@ typedef struct intel_screen_private {
 
 	PixmapPtr render_source, render_mask, render_dest;
 	PicturePtr render_source_picture, render_mask_picture, render_dest_picture;
-	Bool needs_3d_invariant;
-	Bool needs_render_state_emit;
-	Bool needs_render_vertex_emit;
 
 	/* i830 render accel state */
 	uint32_t render_dest_format;
@@ -243,20 +249,23 @@ typedef struct intel_screen_private {
 	} i915_render_state;
 
 	struct {
+		dri_bo *samplers;
+		dri_bo *kernel;
+
 		int num_sf_outputs;
 		int drawrect;
 		uint32_t blend;
-		dri_bo *samplers;
-		dri_bo *kernel;
 	} gen6_render_state;
 
 	uint32_t prim_offset;
-	void (*prim_emit)(struct intel_screen_private *intel,
-			  int srcX, int srcY,
-			  int maskX, int maskY,
-			  int dstX, int dstY,
-			  int w, int h);
 	int floats_per_vertex;
+
+	void (*prim_emit)(struct intel_screen_private *intel,
+		int srcX, int srcY,
+		int maskX, int maskY,
+		int dstX, int dstY,
+		int w, int h);
+
 	int last_floats_per_vertex;
 	uint16_t vertex_offset;
 	uint16_t vertex_count;
@@ -281,30 +290,31 @@ typedef struct intel_screen_private {
 	int drmSubFD;
 	char *deviceName;
 
-	Bool use_pageflipping;
-	Bool use_triple_buffer;
-	Bool force_fallback;
-	Bool has_kernel_flush;
-	Bool needs_flush;
-
-	/* Broken-out options. */
-	OptionInfoPtr Options;
+	bool use_pageflipping;
+	bool use_triple_buffer;
+	bool force_fallback;
+	bool has_kernel_flush;
+	bool needs_flush;
+	bool has_prime_vmap_flush;
 
 	/* Driver phase/state information */
-	Bool suspended;
-
-	enum last_3d last_3d;
+	bool suspended;
 
 	/**
 	 * User option to print acceleration fallback info to the server log.
 	 */
-	Bool fallback_debug;
+	bool fallback_debug;
+
+	/* Broken-out options. */
+	OptionInfoPtr Options;
+
+	enum last_3d last_3d;
+
 	unsigned debug_flush;
 #if HAVE_UDEV
 	struct udev_monitor *uevent_monitor;
 	pointer uevent_handler;
 #endif
-	Bool has_prime_vmap_flush;
 
 #if HAVE_DRI3
 	SyncScreenFuncsRec save_sync_screen_funcs;
@@ -402,15 +412,20 @@ typedef void (*intel_pageflip_handler_proc) (uint64_t frame,
 
 typedef void (*intel_pageflip_abort_proc) (void *data);
 
-typedef struct _DRI2FrameEvent {
+typedef struct _DRI2FrameEvent
+{
 	struct intel_screen_private *intel;
+	struct list drawable_resource;
+	struct list client_resource;
+
+	dri_bo *old_buffer;
 
 	XID drawable_id;
-	ClientPtr client;
 	enum DRI2FrameEventType type;
 	int frame;
 
-	struct list drawable_resource, client_resource;
+	/* CACHELINE() */
+	ClientPtr client;
 
 	/* for swaps & flips only */
 	DRI2SwapEventPtr event_complete;
@@ -423,7 +438,6 @@ typedef struct _DRI2FrameEvent {
 	int old_height;
 	int old_pitch;
 	int old_tiling;
-	dri_bo *old_buffer;
 } DRI2FrameEventRec, *DRI2FrameEventPtr;
 
 extern Bool intel_do_pageflip(intel_screen_private *intel,
