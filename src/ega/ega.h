@@ -58,7 +58,6 @@ typedef struct ega {
 	OptionInfoPtr Options;
 
 	/* Required for XvMC via UXA */
-	Bool XvDisabled;	/* Xv disabled in PreInit. */
 	Bool XvEnabled;		/* Xv enabled for this generation. */
 	Bool XvPreferOverlay;
 
