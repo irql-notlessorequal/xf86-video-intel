@@ -307,8 +307,11 @@ struct sna {
 	uint32_t timer_expire[NUM_TIMERS];
 	uint16_t timer_active;
 
-	/* Never permit a negative vblank interval. */
-	unsigned int vblank_interval;
+	/* Never permit a negative vblank interval. (0-255 ms) */
+	uint8_t vblank_interval;
+
+	/* Driver phase/state information */
+	bool suspended;
 
 	struct list flush_pixmaps;
 	struct list active_pixmaps;
@@ -324,7 +327,9 @@ struct sna {
 		unsigned rr_active;
 		unsigned flip_active;
 		unsigned hidden;
+
 		bool shadow_enabled;
+		bool shadow_dirty;
 		bool dirty;
 		/* Only used in gen7_render.c */
 		bool has_mitigations_active;
@@ -337,7 +342,6 @@ struct sna {
 		RegionRec shadow_region;
 		RegionRec shadow_cancel;
 		struct list shadow_crtc;
-		bool shadow_dirty;
 
 		unsigned num_real_crtc;
 		unsigned num_real_output;
@@ -453,9 +457,6 @@ struct sna {
 
 	/* Broken-out options. */
 	OptionInfoPtr Options;
-
-	/* Driver phase/state information */
-	bool suspended;
 
 #if HAVE_UDEV
 	struct udev_monitor *uevent_monitor;
