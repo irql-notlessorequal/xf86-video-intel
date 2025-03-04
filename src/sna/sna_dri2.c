@@ -67,13 +67,14 @@ static inline struct kgem_bo *ref(struct kgem_bo *bo)
 	return kgem_bo_reference(bo);
 }
 
-struct sna_dri2_private {
-	PixmapPtr pixmap;
+struct sna_dri2_private
+{
 	struct kgem_bo *bo;
+	PixmapPtr pixmap;
 	DRI2Buffer2Ptr proxy;
-	bool stale;
 	uint32_t size;
 	int refcnt;
+	bool stale;
 };
 
 static inline struct sna_dri2_private *
@@ -112,38 +113,41 @@ struct dri_bo {
 	unsigned flags;
 };
 
-struct sna_dri2_event {
+struct sna_dri2_event
+{
 	struct sna *sna;
 	DrawablePtr draw;
 	ClientPtr client;
-	enum event_type type;
 	xf86CrtcPtr crtc;
-	int index;
-	bool queued;
-	bool sync;
-	bool chained;
 
 	/* for swaps & flips only */
 	DRI2SwapEventPtr event_complete;
 	void *event_data;
 	DRI2BufferPtr front;
 	DRI2BufferPtr back;
+
+	struct list link;
 	struct kgem_bo *bo;
+	struct sna_dri2_event *chain;
+
+	enum event_type type;
+	int index;
+
+	bool queued;
+	bool sync;
+	bool chained;
+	bool signal;
+
+	/** We don't need more than 0-8. */
+	uint8_t keepalive;
+	uint8_t flip_continue;
 
 	struct copy {
 		struct kgem_bo *bo;
-		unsigned flags;
 		uint32_t name;
 		uint32_t size;
+		unsigned flags;
 	} pending;
-
-	struct sna_dri2_event *chain;
-
-	struct list link;
-
-	int flip_continue;
-	int keepalive;
-	int signal;
 };
 
 #define KEEPALIVE_ASYNC 8 /* wait ~100ms before discarding swap caches */
