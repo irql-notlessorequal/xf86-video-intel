@@ -62,27 +62,29 @@
 
 #define KNOWN_MODE_FLAGS ((1<<14)-1)
 
-struct intel_drm_queue {
-        struct list list;
-        xf86CrtcPtr crtc;
-        uint32_t seq;
-        void *data;
-        ScrnInfoPtr scrn;
-        intel_drm_handler_proc handler;
-        intel_drm_abort_proc abort;
+struct intel_drm_queue
+{
+	struct list list;
+	void *data;
+	ScrnInfoPtr scrn;
+	xf86CrtcPtr crtc;
+	intel_drm_handler_proc handler;
+	intel_drm_abort_proc abort;
+	uint32_t seq;
 };
 
 static uint32_t intel_drm_seq;
 static struct list intel_drm_queue;
 
-struct intel_mode {
+struct intel_mode
+{
 	int fd;
 	uint32_t fb_id;
+	int old_fb_id;
 	int cpp;
+	int flip_count;
 
 	drmEventContext event_context;
-	int old_fb_id;
-	int flip_count;
 	uint64_t fe_msc;
 	uint64_t fe_usec;
 
@@ -119,34 +121,38 @@ struct intel_crtc {
 	uint64_t msc_high;
 };
 
-struct intel_property {
+struct intel_property
+{
 	drmModePropertyPtr mode_prop;
+	Atom *atoms;
 	uint64_t value;
 	int num_atoms; /* if range prop, num_atoms == 1; if enum prop, num_atoms == num_enums + 1 */
-	Atom *atoms;
 };
 
-struct intel_output {
+struct intel_output
+{
 	struct intel_mode *mode;
-	int output_id;
 	drmModeConnectorPtr mode_output;
 	drmModeEncoderPtr *mode_encoders;
 	drmModePropertyBlobPtr edid_blob;
-	int num_props;
 	struct intel_property *props;
 	void *private_data;
 
-	Bool has_panel_limits;
-	int panel_hdisplay;
-	int panel_vdisplay;
+	int output_id;
+	int num_props;
 
-	int dpms_mode;
+	int panel_vdisplay;
+	int panel_hdisplay;
+
 	struct backlight backlight;
-	int backlight_active_level;
-	xf86OutputPtr output;
 	struct list link;
+	xf86OutputPtr output;
+	
+	int dpms_mode;
+	int backlight_active_level;
 	int enc_mask;
 	int enc_clone_mask;
+	int has_panel_limits;
 };
 
 static void
