@@ -475,8 +475,8 @@ typedef struct _sna_pixmap_priv
 {
 	PixmapDirtyUpdatePtr dirty;
 	DrawablePtr secondary_src;
-	unsigned int defer_dirty_update : 1;
-	unsigned int notify_on_damage : 1;
+	bool defer_dirty_update;
+	bool notify_on_damage;
 } sna_pixmap_priv_rec, *sna_pixmap_priv;
 
 #define sna_get_pixmap_priv(sna, p) ((sna_pixmap_priv)dixGetPrivateAddr(&(p)->devPrivates, &(sna)->pixmapPrivateKeyRec))
