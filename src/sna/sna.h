@@ -355,7 +355,8 @@ struct sna {
 		Bool (*rrGetInfo)(ScreenPtr, Rotation *);
 	} mode;
 
-	struct {
+	struct
+	{
 		struct sna_cursor *cursors;
 		xf86CursorInfoPtr info;
 		CursorPtr ref;
@@ -364,17 +365,21 @@ struct sna {
 		uint32_t fg, bg;
 		int size;
 
-		bool disable;
-		bool active;
-		int last_x;
-		int last_y;
+		/* CACHELINE */
 
-		unsigned max_size;
-		bool use_gtt;
-
-		int num_stash;
 		struct sna_cursor *stash;
 		void *scratch;
+
+		int last_x;
+		int last_y;
+		int num_stash;
+
+		unsigned max_size;
+
+		bool disable;
+		bool active;
+		bool use_gtt;
+
 	} cursor;
 
 	struct sna_dri2
