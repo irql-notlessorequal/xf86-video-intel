@@ -111,10 +111,11 @@
  * There are no requirements for a list head, any struct list can be a list
  * head.
  */
-struct list {
+struct list
+{
     struct list *next;
 	struct list *prev;
-} __attribute__((aligned(64)));
+};
 
 /**
  * Initialize the list as an empty list.

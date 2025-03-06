@@ -292,22 +292,26 @@ struct sna {
 #define AVX 0x80
 #define AVX2 0x100
 
-	bool ignore_copy_area : 1;
+	bool ignore_copy_area;
 	/* Enables an unimplemented DRI2 swap extension. */
-	bool enable_async_swap : 1;
+	bool enable_async_swap;
+
+	bool needs_shm_flush;
+	bool needs_dri_flush;
 
 	unsigned watch_shm_flush;
 	unsigned watch_dri_flush;
 	unsigned damage_event;
-	bool needs_shm_flush;
-	bool needs_dri_flush;
 
 	struct timeval timer_tv;
 	uint32_t timer_expire[NUM_TIMERS];
 	uint16_t timer_active;
 
-	/* Never permit a negative vblank interval. */
-	unsigned int vblank_interval;
+	/* Never permit a negative vblank interval. (0-255 ms) */
+	uint8_t vblank_interval;
+
+	/* Driver phase/state information */
+	bool suspended;
 
 	struct list flush_pixmaps;
 	struct list active_pixmaps;
@@ -323,8 +327,12 @@ struct sna {
 		unsigned rr_active;
 		unsigned flip_active;
 		unsigned hidden;
+
 		bool shadow_enabled;
+		bool shadow_dirty;
 		bool dirty;
+		/* Only used in gen7_render.c */
+		bool has_mitigations_active;
 
 		struct drm_event_vblank *shadow_events;
 		int shadow_nevent;
@@ -334,7 +342,6 @@ struct sna {
 		RegionRec shadow_region;
 		RegionRec shadow_cancel;
 		struct list shadow_crtc;
-		bool shadow_dirty;
 
 		unsigned num_real_crtc;
 		unsigned num_real_output;
@@ -352,7 +359,8 @@ struct sna {
 		Bool (*rrGetInfo)(ScreenPtr, Rotation *);
 	} mode;
 
-	struct {
+	struct
+	{
 		struct sna_cursor *cursors;
 		xf86CursorInfoPtr info;
 		CursorPtr ref;
@@ -361,50 +369,58 @@ struct sna {
 		uint32_t fg, bg;
 		int size;
 
-		bool disable;
-		bool active;
-		int last_x;
-		int last_y;
+		/* CACHELINE */
 
-		unsigned max_size;
-		bool use_gtt;
-
-		int num_stash;
 		struct sna_cursor *stash;
 		void *scratch;
+
+		int last_x;
+		int last_y;
+		int num_stash;
+
+		unsigned max_size;
+
+		bool disable;
+		bool active;
+		bool use_gtt;
+
 	} cursor;
 
-	struct sna_dri2 {
-		bool available : 1;
-		bool enable : 1;
-		bool open : 1;
-
+	struct sna_dri2
+	{
 #if HAVE_DRI2
 		void *flip_pending;
 		unsigned client_count;
 #endif
+
+		bool available : 1;
+		bool enable : 1;
+		bool open : 1;
 	} dri2;
 
-	struct sna_dri3 {
-		bool available :1;
+	struct sna_dri3
+	{
+#if HAVE_DRI3
+		struct list pixmaps;
+		SyncScreenCreateFenceFunc create_fence;
+#endif
+
+		bool available : 1;
 		bool override : 1;
 		bool enable : 1;
-		bool open :1;
-
-#if HAVE_DRI3
-		SyncScreenCreateFenceFunc create_fence;
-		struct list pixmaps;
-#endif
+		bool open : 1;
 	} dri3;
 
-	struct sna_present {
-		bool available;
-		bool open;
+	struct sna_present
+	{
 #if HAVE_PRESENT
 		struct list vblank_queue;
-		uint64_t unflip;
 		void *freed_info;
+		uint64_t unflip;
 #endif
+
+		bool available;
+		bool open;
 	} present;
 
 	struct sna_xv {
@@ -442,9 +458,6 @@ struct sna {
 	/* Broken-out options. */
 	OptionInfoPtr Options;
 
-	/* Driver phase/state information */
-	bool suspended;
-
 #if HAVE_UDEV
 	struct udev_monitor *uevent_monitor;
 	pointer uevent_handler;
@@ -475,8 +488,8 @@ typedef struct _sna_pixmap_priv
 {
 	PixmapDirtyUpdatePtr dirty;
 	DrawablePtr secondary_src;
-	unsigned int defer_dirty_update : 1;
-	unsigned int notify_on_damage : 1;
+	bool defer_dirty_update;
+	bool notify_on_damage;
 } sna_pixmap_priv_rec, *sna_pixmap_priv;
 
 #define sna_get_pixmap_priv(sna, p) ((sna_pixmap_priv)dixGetPrivateAddr(&(p)->devPrivates, &(sna)->pixmapPrivateKeyRec))

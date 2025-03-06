@@ -140,27 +140,28 @@ inline static void apply_damage_box(struct sna_composite_op *op, const BoxRec *b
 #define AREA_TO_FLOAT(c)  ((c) / (float)GRID_AREA)
 #define TO_ALPHA(c) (((c)+1) >> 1)
 
-struct quorem {
-	int64_t quo;
+struct quorem
+{
 	int64_t rem;
+	int64_t quo;
 };
 
-struct edge {
+struct edge
+{
 	struct edge *next, *prev;
 
 	int dir;
-
 	int height_left;
-
 	int cell;
+
+	/* The clipped y of the top of the edge. */
+	int ytop;
+
 	struct quorem x;
 
 	/* Advance of the current x when moving down a subsample line. */
 	struct quorem dxdy;
 	int64_t dy;
-
-	/* The clipped y of the top of the edge. */
-	int ytop;
 
 	/* y2-y1 after orienting the edge downwards.  */
 };
@@ -2472,16 +2473,17 @@ pixmask_span(struct sna *sna,
 			       box->x2 - box->x1, box->y2 - box->y1);
 }
 
-struct inplace_x8r8g8b8_thread {
+struct inplace_x8r8g8b8_thread
+{
 	xTrapezoid *traps;
 	PicturePtr dst, src;
 	BoxRec extents;
 	int dx, dy;
 	int ntrap;
-	bool lerp, is_solid;
-	uint32_t color;
 	int16_t src_x, src_y;
+	uint32_t color;
 	uint8_t op;
+	bool lerp, is_solid;
 };
 
 static void inplace_x8r8g8b8_thread(void *arg)
@@ -2818,7 +2820,8 @@ trapezoid_span_inplace__x8r8g8b8(CARD8 op,
 	return true;
 }
 
-struct inplace_thread {
+struct inplace_thread
+{
 	xTrapezoid *traps;
 	span_func_t span;
 	struct inplace inplace;
@@ -2826,8 +2829,8 @@ struct inplace_thread {
 	BoxRec extents;
 	int dx, dy;
 	int draw_x, draw_y;
-	bool unbounded;
 	int ntrap;
+	bool unbounded;
 };
 
 static void inplace_thread(void *arg)

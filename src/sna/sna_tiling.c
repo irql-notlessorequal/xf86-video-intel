@@ -38,10 +38,13 @@ struct sna_tile_span {
 	float opacity;
 };
 
-struct sna_tile_state {
-	int op;
+struct sna_tile_state
+{
 	PicturePtr src, mask, dst;
 	PixmapPtr dst_pixmap;
+	struct sna_composite_rectangles *rects;
+
+	int op;
 	uint32_t dst_format;
 	int16_t src_x, src_y;
 	int16_t mask_x, mask_y;
@@ -51,7 +54,7 @@ struct sna_tile_state {
 
 	int rect_count;
 	int rect_size;
-	struct sna_composite_rectangles rects_embedded[16], *rects;
+	struct sna_composite_rectangles rects_embedded[16];
 };
 
 static void

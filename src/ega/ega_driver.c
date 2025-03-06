@@ -105,7 +105,7 @@ Bool ega_pre_init(ScrnInfoPtr scrn, int flags)
 			scrn->driverPrivate = ega;
 		}
 
-		if (!ega->info->allow_ega)
+		if (ega->info->gen < 040)
 		{
 			xf86DrvMsg(scrn->scrnIndex, X_ERROR, "EGA not available on this GPU, please try SNA or UXA instead.\n");
 			return FALSE;

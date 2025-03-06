@@ -45,26 +45,26 @@
 
 #ifndef EGA_CORE
 #define EGA_CORE 1
-typedef struct ega {
+typedef struct ega
+{
 	struct intel_device *dev;
 	const struct intel_device_info *info;
 	dri_bufmgr *bufmgr;
 
-	unsigned int blitter_available : 1 ;
-	unsigned int native_xvmc_available : 1;
-	unsigned int use_overlay : 1;
-	unsigned int force_fallback : 1;
-
 	OptionInfoPtr Options;
+	XF86VideoAdaptorPtr adaptor;
+
+	bool blitter_available;
+	bool native_xvmc_available;
+	bool use_overlay;
+	bool force_fallback;
 
 	/* Required for XvMC via UXA */
-	Bool XvDisabled;	/* Xv disabled in PreInit. */
 	Bool XvEnabled;		/* Xv enabled for this generation. */
 	Bool XvPreferOverlay;
 
 	int drmSubFD;
 	int colorKey;
-	XF86VideoAdaptorPtr adaptor;
 } ega;
 
 static inline ega * ega_get_screen_private(ScrnInfoPtr scrn)
