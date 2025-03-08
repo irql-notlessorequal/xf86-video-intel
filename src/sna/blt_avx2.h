@@ -94,50 +94,65 @@ memcpy_to_tiled_x__swizzle_0__avx2(const void *src, void *dst, int bpp,
 	const unsigned tile_shift = ffs(tile_pixels) - 1;
 	const unsigned tile_mask = tile_pixels - 1;
 
+	unsigned offset_x, length_x;
+
 	DBG(("%s(bpp=%d): src=(%d, %d), dst=(%d, %d), size=%dx%d, pitch=%d/%d\n",
 	     __FUNCTION__, bpp, src_x, src_y, dst_x, dst_y, width, height, src_stride, dst_stride));
 	assert(src != dst);
 
 	if (src_x | src_y)
 		src = (const uint8_t *)src + src_y * src_stride + src_x * cpp;
-	assert(src_stride >= width * cpp);
-	src_stride -= width * cpp;
+	width *= cpp;
+	assert(src_stride >= width);
+
+	if (dst_x & tile_mask)
+	{
+		offset_x = (dst_x & tile_mask) * cpp;
+		length_x = min(tile_width - offset_x, width);
+	}
+	else
+	{
+		length_x = 0;
+	}
+	dst = (uint8_t *)dst + (dst_x >> tile_shift) * tile_size;
 
 	while (height--)
 	{
-		unsigned w = width * cpp;
+		unsigned w = width;
+		const uint8_t *src_row = src;
 		uint8_t *tile_row = dst;
+
+		src = (const uint8_t *)src + src_stride;
 
 		tile_row += dst_y / tile_height * dst_stride * tile_height;
 		tile_row += (dst_y & (tile_height-1)) * tile_width;
-		if (dst_x)
-		{
-			tile_row += (dst_x >> tile_shift) * tile_size;
-			if (dst_x & tile_mask)
-			{
-				const unsigned x = (dst_x & tile_mask) * cpp;
-				const unsigned len = min(tile_width - x, w);
-				to_memcpy_avx2(assume_misaligned(tile_row + x, tile_width, x),
-				       src, len);
+		dst_y++;
 
-				tile_row += tile_size;
-				src = (const uint8_t *)src + len;
-				w -= len;
-			}
+		if (length_x)
+		{
+			to_memcpy_avx2(tile_row + offset_x, src_row, length_x);
+
+			tile_row += tile_size;
+			src_row = (const uint8_t *)src_row + length_x;
+			w -= length_x;
 		}
 
 		while (w >= tile_width)
 		{
+			assert(((uintptr_t)tile_row & (tile_width - 1)) == 0);
 			to_memcpy_avx2(assume_aligned(tile_row, tile_width),
-			       src, tile_width);
+				    src_row, tile_width);
 			tile_row += tile_size;
-			src = (const uint8_t *)src + tile_width;
+			src_row = (const uint8_t *)src_row + tile_width;
 			w -= tile_width;
 		}
 
-		to_memcpy_avx2(assume_aligned(tile_row, tile_width), src, w);
-		src = (const uint8_t *)src + src_stride + w;
-		dst_y++;
+		if (w)
+		{
+			assert(((uintptr_t)tile_row & (tile_width - 1)) == 0);
+			to_memcpy_avx2(assume_aligned(tile_row, tile_width),
+				  src_row, w);
+		}
 	}
 }
 

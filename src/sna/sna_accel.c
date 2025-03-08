@@ -638,7 +638,7 @@ static inline uint32_t default_tiling(struct sna *sna, PixmapPtr pixmap)
 	return I915_TILING_Y;
 #else
 	/* Use Y tiling only on GPUs that can benefit from it. */
-	if (pixmap->usage_hint != SNA_CREATE_FB && prefer_y_tiling(sna))
+	if (prefer_y_tiling(sna))
 	{
 		return I915_TILING_Y;
 	}
@@ -671,7 +671,8 @@ struct kgem_bo *sna_pixmap_change_tiling(PixmapPtr pixmap, uint32_t tiling)
 	DBG(("%s: changing tiling %d -> %d for %dx%d pixmap\n",
 	     __FUNCTION__, priv->gpu_bo->tiling, tiling,
 	     pixmap->drawable.width, pixmap->drawable.height));
-	assert(priv->gpu_damage == NULL || priv->gpu_bo);
+	assert(priv->gpu_damage);
+	assert(priv->gpu_bo);
 	assert(priv->gpu_bo->tiling != tiling);
 
 	if (priv->pinned) {
@@ -871,7 +872,7 @@ create_pixmap(struct sna *sna, ScreenPtr screen,
 	sna->debug_memory.pixmap_allocs++;
 #endif
 
-	DBG(("%s: serial=%ld, usage=%d, %dx%d\n",
+	DBG(("%s: serial=%ld, usage=%u, %dx%d\n",
 	     __FUNCTION__,
 	     pixmap->drawable.serialNumber,
 	     pixmap->usage_hint,
@@ -1040,6 +1041,15 @@ sna_pixmap_create_unattached(ScreenPtr screen,
 	return create_pixmap(to_sna_from_screen(screen),
 			     screen, width, height, depth,
 			     -1);
+}
+
+PixmapPtr
+sna_pixmap_create_unattached_with_hint(ScreenPtr screen,
+	int width, int height, int depth, unsigned int hint)
+{
+	return create_pixmap(to_sna_from_screen(screen),
+			     screen, width, height, depth,
+			     hint);
 }
 
 static PixmapPtr
@@ -1651,7 +1661,7 @@ static Bool sna_destroy_pixmap(PixmapPtr pixmap)
 		priv->gpu_bo = NULL;
 	}
 
-	if (priv->shm && kgem_bo_is_busy(priv->cpu_bo)) {
+	if (priv->shm && priv->cpu_bo && kgem_bo_is_busy(priv->cpu_bo)) {
 		DBG(("%s: deferring release of active SHM pixmap=%ld\n",
 		     __FUNCTION__, pixmap->drawable.serialNumber));
 		add_shm_flush(sna, priv);
@@ -3767,9 +3777,10 @@ sna_drawable_use_bo(DrawablePtr drawable, unsigned flags, const BoxRec *box,
 	int16_t dx, dy;
 	int ret;
 
-	DBG(("%s pixmap=%ld, box=((%d, %d), (%d, %d)), flags=%x...\n",
+	DBG(("%s: pixmap=%ld, usage=%u, box=((%d, %d), (%d, %d)), flags=%x...\n",
 	     __FUNCTION__,
 	     pixmap->drawable.serialNumber,
+		 pixmap->usage_hint,
 	     box->x1, box->y1, box->x2, box->y2,
 	     flags));
 
@@ -6631,14 +6642,14 @@ sna_copy_boxes(DrawablePtr src, DrawablePtr dst, GCPtr gc,
 					   region, dx, dy,
 					   bitplane, closure);
 
-	DBG(("%s (boxes=%dx[(%d, %d), (%d, %d)...], src pixmap=%ld+(%d, %d), dst pixmap=%ld+(%d, %d), alu=%d, src.size=%dx%d, dst.size=%dx%d)\n",
-	     __FUNCTION__, n,
-	     box[0].x1, box[0].y1, box[0].x2, box[0].y2,
-	     src_pixmap->drawable.serialNumber, dx, dy,
-	     dst_pixmap->drawable.serialNumber, get_drawable_dx(dst), get_drawable_dy(dst),
-	     alu,
-	     src_pixmap->drawable.width, src_pixmap->drawable.height,
-	     dst_pixmap->drawable.width, dst_pixmap->drawable.height));
+	DBG(("%s(boxes=%dx[(%d, %d), (%d, %d)...], src pixmap=%ld+(%d, %d u=%u), dst pixmap=%ld+(%d, %d u=%u), alu=%d, src.size=%dx%d, dst.size=%dx%d)\n",
+	    __FUNCTION__, n,
+	    box[0].x1, box[0].y1, box[0].x2, box[0].y2,
+	    src_pixmap->drawable.serialNumber, dx, dy, src_pixmap->usage_hint,
+	    dst_pixmap->drawable.serialNumber, get_drawable_dx(dst),
+		get_drawable_dy(dst), dst_pixmap->usage_hint, alu,
+	    src_pixmap->drawable.width, src_pixmap->drawable.height,
+	    dst_pixmap->drawable.width, dst_pixmap->drawable.height));
 
 	assert_pixmap_damage(dst_pixmap);
 	assert_pixmap_damage(src_pixmap);
@@ -6795,10 +6806,15 @@ discard_cow:
 					return;
 				}
 			}
+
+			int flags = small_copy(region);
+			if (src_pixmap->usage_hint == SNA_PIXMAP_USAGE_DRI3_IMPORT)
+				flags |= COPY_AVOID_BLT;
+
 			if (!sna->render.copy_boxes(sna, alu,
 						    &src_pixmap->drawable, src_priv->gpu_bo, src_dx, src_dy,
 						    &dst_pixmap->drawable, bo, 0, 0,
-						    box, n, small_copy(region))) {
+						    box, n, flags)) {
 				DBG(("%s: fallback - accelerated copy boxes failed\n",
 				     __FUNCTION__));
 				goto fallback;
@@ -7370,7 +7386,7 @@ sna_fallback_copy_boxes(DrawablePtr src, DrawablePtr dst, GCPtr gc,
 			RegionPtr region, int dx, int dy,
 			Pixel bitplane, void *closure)
 {
-	DBG(("%s (boxes=%dx[(%d, %d), (%d, %d)...], src=+(%d, %d), alu=%d\n",
+	DBG(("%s: (boxes=%dx[(%d, %d), (%d, %d)...], src=+(%d, %d), alu=%d\n",
 	     __FUNCTION__, region_num_rects(region),
 	     region->extents.x1, region->extents.y1,
 	     region->extents.x2, region->extents.y2,
@@ -7406,6 +7422,28 @@ out:
 	sna_gc_move_to_gpu(gc);
 }
 
+static bool sna_copy_area_should_fallback(struct sna *sna, GCPtr gc, DrawablePtr src, DrawablePtr dst)
+{
+	PixmapPtr src_pixmap = get_drawable_pixmap(src);
+
+	if (FORCE_FALLBACK)
+		return true;
+
+	if (!ACCEL_COPY_AREA)
+		return true;
+
+	if (wedged(sna))
+		return true;
+
+	if (!PM_IS_SOLID(dst, gc->planemask))
+		return true;
+
+	if (gc->depth < 8)
+		return true;
+
+	return false;
+}
+
 static RegionPtr
 sna_copy_area(DrawablePtr src, DrawablePtr dst, GCPtr gc,
 	      int src_x, int src_y,
@@ -7429,8 +7467,7 @@ sna_copy_area(DrawablePtr src, DrawablePtr dst, GCPtr gc,
 	     dst_x, dst_y, dst->x, dst->y,
 	     gc->alu, gc->planemask, gc->depth));
 
-	if (FORCE_FALLBACK || !ACCEL_COPY_AREA || wedged(sna) ||
-	    !PM_IS_SOLID(dst, gc->planemask) || gc->depth < 8) {
+	if (sna_copy_area_should_fallback(sna, gc, src, dst)) {
 		DBG(("%s: fallback copy\n", __FUNCTION__));
 		copy = sna_fallback_copy_boxes;
 	} else if (src == dst) {
@@ -18036,7 +18073,10 @@ static void sna_accel_debug_memory(struct sna *sna)
 static void sna_accel_debug_memory(struct sna *sna) { }
 #endif
 
-static ShmFuncs shm_funcs = { sna_pixmap_create_shm, NULL };
+static ShmFuncs shm_funcs = { 
+	.CreatePixmap = sna_pixmap_create_shm,
+	.PutImage = NULL
+};
 
 static PixmapPtr
 sna_get_window_pixmap(WindowPtr window)

@@ -7277,21 +7277,6 @@ update_scanout:
 				goto error;
 			}
 		}
-
-		/**
-		 * Protect from potential explosions.
-		 * 
-		 * The kernel DOES NOT allow commiting different modifiers.
-		 */
-		if (async && unlikely(bo->tiling != crtc->bo->tiling))
-		{
-			xf86DrvMsg(sna->scrn->scrnIndex, X_ERROR,
-				"%s tried switching modifiers during an async page flip, tell a developer NOW!\n", __FUNCTION__);
-			xf86DrvMsg(sna->scrn->scrnIndex, X_DEBUG, "%s: attempted tiling: %s, CRTC tiling: %s\n", __FUNCTION__, 
-				tiling_to_str(bo->tiling), tiling_to_str(crtc->bo->tiling));
-			goto error;
-		}
-
 		/* Only the reference crtc will finally deliver its page flip
 		 * completion event. All other crtc's events will be discarded.
 		 */

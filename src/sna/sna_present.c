@@ -38,15 +38,16 @@
 
 static present_screen_info_rec present_info;
 
-struct sna_present_event {
+struct sna_present_event
+{
 	xf86CrtcPtr crtc;
 	struct sna *sna;
 	struct list link;
 	uint64_t *event_id;
 	uint64_t target_msc;
 	int n_event_id;
-	bool queued:1;
-	bool active:1;
+	bool queued;
+	bool active;
 };
 
 static void sna_present_unflip(ScreenPtr screen, uint64_t event_id);
@@ -365,9 +366,12 @@ sna_present_get_crtc(WindowPtr window)
 	struct sna *sna = to_sna_from_drawable(&window->drawable);
 	BoxRec box;
 	xf86CrtcPtr crtc;
+	int usage_hint = get_window_pixmap(window)->usage_hint;
 
-	DBG(("%s: window=%ld (pixmap=%ld), box=(%d, %d)x(%d, %d)\n",
-	     __FUNCTION__, window->drawable.id, get_window_pixmap(window)->drawable.serialNumber,
+	DBG(("%s: window=%ld (pixmap=%ld usage=%u), box=(%d, %d)x(%d, %d)\n",
+	     __FUNCTION__, window->drawable.id, 
+		 get_window_pixmap(window)->drawable.serialNumber,
+		 usage_hint,
 	     window->drawable.x, window->drawable.y,
 	     window->drawable.width, window->drawable.height));
 
@@ -610,10 +614,11 @@ static Bool sna_present_check_flip2(RRCrtcPtr crtc, WindowPtr window, PixmapPtr 
 	struct sna *sna = to_sna_from_pixmap(pixmap);
 	struct sna_pixmap *flip;
 
-	DBG(("%s(crtc=%d, pixmap=%ld, sync_flip=%d)\n",
+	DBG(("%s(crtc=%d, pixmap=%ld, usage=%u, sync_flip=%d)\n",
 	     __FUNCTION__,
 	     crtc_index_from_crtc(crtc),
 	     pixmap->drawable.serialNumber,
+		 pixmap->usage_hint,
 	     sync_flip));
 
 	if (!sna->scrn->vtSema) {
@@ -640,6 +645,11 @@ static Bool sna_present_check_flip2(RRCrtcPtr crtc, WindowPtr window, PixmapPtr 
 
 	if (!check_flip__crtc(sna, crtc)) {
 		DBG(("%s: flip invalid for CRTC\n", __FUNCTION__));
+		return FALSE;
+	}
+
+	if (!sync_flip && pixmap->usage_hint == SNA_PIXMAP_USAGE_DRI3_IMPORT) {
+		DBG(("%s: flip invalid for modifier\n", __FUNCTION__));
 		return FALSE;
 	}
 
@@ -737,11 +747,11 @@ do_flip(struct sna *sna,
 {
 	struct sna_present_event *info;
 
-	DBG(("%s(crtc=%d, event=%lld, handle=%d)\n",
+	DBG(("%s(crtc=%d, event=%lld, handle=%d async=%d)\n",
 	     __FUNCTION__,
 	     crtc_index_from_crtc(crtc),
 	     (long long)event_id,
-	     bo->handle));
+	     bo->handle, async));
 
 	info = info_alloc(sna);
 	if (info == NULL)
@@ -786,12 +796,10 @@ flip(struct sna *sna,
 }
 
 static struct kgem_bo *
-get_flip_bo(PixmapPtr pixmap, bool async_flip)
+get_flip_bo(struct sna *sna, PixmapPtr pixmap, bool async_flip)
 {
-	struct sna *sna = to_sna_from_pixmap(pixmap);
 	struct sna_pixmap *priv;
-
-	DBG(("%s(pixmap=%ld)\n", __FUNCTION__, pixmap->drawable.serialNumber));
+	DBG(("%s(pixmap=%ld usage=%u)\n", __FUNCTION__, pixmap->drawable.serialNumber, pixmap->usage_hint));
 
 	priv = sna_pixmap_move_to_gpu(pixmap, MOVE_READ | __MOVE_SCANOUT | __MOVE_FORCE);
 	if (priv == NULL) {
@@ -854,19 +862,6 @@ get_flip_bo(PixmapPtr pixmap, bool async_flip)
 		return NULL;
 	}
 
-	/**
-	 * This is horribly convoluted but we need to prevent it from
-	 * 1. Breaking asynchronous page flipping between foreign GPUs.
-	 * 2. Switching the framebuffer modifier to LINEAR since that's dumb.
-	 */
-	if (priv->gpu_bo->tiling == I915_TILING_NONE
-		 && !(sna->flags & SNA_LINEAR_FB)
-		 && (priv->pinned & PIN_DRI3))
-	{
-		DBG(("%s: cannot scanout LINEAR via hardware, forcing BLT+SCANOUT.\n", __FUNCTION__));
-		return NULL;
-	}
-
 	return priv->gpu_bo;
 }
 
@@ -913,7 +908,7 @@ sna_present_flip(RRCrtcPtr crtc,
 			return FALSE;
 	}
 
-	bo = get_flip_bo(pixmap, !sync_flip);
+	bo = get_flip_bo(sna, pixmap, !sync_flip);
 	if (bo == NULL) {
 		DBG(("%s: flip invalid bo\n", __FUNCTION__));
 		return FALSE;
@@ -954,7 +949,7 @@ notify:
 		return;
 	}
 
-	bo = get_flip_bo(screen->GetScreenPixmap(screen), false);
+	bo = get_flip_bo(sna, screen->GetScreenPixmap(screen), false);
 
 	/* Are we unflipping after a failure that left our ScreenP in place? */
 	if (!sna_needs_page_flip(sna, bo))

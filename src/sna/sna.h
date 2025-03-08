@@ -101,6 +101,17 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define TEST_KGEM (TEST_ALL || 0)
 #define TEST_RENDER (TEST_ALL || 0)
 
+/**
+ * Used for the async-flipping workaround.
+ */
+#define SNA_PIXMAP_USAGE_DRI3_IMPORT 128
+/**
+ * Also used to workaround async-flipping, with the major
+ * difference being that this was imported using the more
+ * modern variant of DRI3, allowing modifiers to be specified.
+ */
+#define SNA_PIXMAP_USAGE_DRI3_IMPORT2 256
+
 #define snaDestroyPixmap(value) dixDestroyPixmap(value, 0)
 
 #include "intel_driver.h"
@@ -131,7 +142,8 @@ struct sna_cow {
 	int refcnt;
 };
 
-struct sna_pixmap {
+struct sna_pixmap
+{
 	PixmapPtr pixmap;
 	struct kgem_bo *gpu_bo, *cpu_bo;
 	struct sna_damage *gpu_damage, *cpu_damage;
@@ -150,23 +162,23 @@ struct sna_pixmap {
 
 #define SOURCE_BIAS 4
 	uint8_t source_count;
-	uint8_t pinned :4;
+	uint8_t pinned;
 #define PIN_SCANOUT 0x1
 #define PIN_DRI2 0x2
 #define PIN_DRI3 0x4
 #define PIN_PRIME 0x8
-	uint8_t create :4;
-	uint8_t mapped :2;
+	uint8_t create;
+	uint8_t mapped;
 #define MAPPED_NONE 0
 #define MAPPED_GTT 1
 #define MAPPED_CPU 2
-	uint8_t flush :2;
+	uint8_t flush;
 #define FLUSH_READ 1
 #define FLUSH_WRITE 2
-	uint8_t shm :1;
-	uint8_t clear :1;
-	uint8_t header :1;
-	uint8_t cpu :1;
+	bool shm;
+	bool clear;
+	bool header;
+	bool cpu;
 };
 
 #define IS_STATIC_PTR(ptr) ((uintptr_t)(ptr) & 1)
@@ -823,8 +835,13 @@ static inline int sna_max_tile_copy_size(struct sna *sna, struct kgem_bo *src, s
 PixmapPtr sna_pixmap_create_upload(ScreenPtr screen,
 				   int width, int height, int depth,
 				   unsigned flags);
+
 PixmapPtr sna_pixmap_create_unattached(ScreenPtr screen,
 				       int width, int height, int depth);
+
+PixmapPtr sna_pixmap_create_unattached_with_hint(ScreenPtr screen,
+			int width, int height, int depth, unsigned int usage);
+
 void sna_pixmap_destroy(PixmapPtr pixmap);
 
 #define assert_pixmap_map(pixmap, priv)  do { \
@@ -1502,24 +1519,36 @@ static inline bool prefer_y_tiling_scanout(struct sna *sna)
 	return should_prefer_y_scanout;
 }
 
-static inline char* tiling_to_str(int tiling)
+static inline char* tiling_to_str(char buf[24], int tiling)
 {
 	switch (tiling)
 	{
 		case I915_TILING_NONE:
-			return "I915_TILING_NONE";
+		{
+			snprintf(buf, 24, "I915_TILING_NONE");
+			break;
+		}
+
 		case I915_TILING_X:
-			return "I915_TILING_X";
+		{
+			snprintf(buf, 24, "I915_TILING_X");
+			break;
+		}
+
 		case I915_TILING_Y:
-			return "I915_TILING_Y";
+		{
+			snprintf(buf, 24, "I915_TILING_Y");
+			break;
+		}
 
 		default:
 		{
-			char buf[16];
-			snprintf(buf, sizeof (buf), "%d", tiling);
-			return buf;
+			snprintf(buf, 24, "%d", tiling);
+			break;
 		}
 	}
+
+	return buf;
 }
 
 #endif /* _SNA_H */

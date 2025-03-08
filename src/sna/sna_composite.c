@@ -655,9 +655,10 @@ sna_composite(CARD8 op,
 	struct sna *sna;
 	int dx, dy;
 
-	DBG(("%s(pixmap=%ld, op=%d, src=%ld+(%d, %d), mask=%ld+(%d, %d), dst=%ld+(%d, %d)+(%d, %d), size=(%d, %d)\n",
+	DBG(("%s(pixmap=%ld, usage=%u, op=%d, src=%ld+(%d, %d), mask=%ld+(%d, %d), dst=%ld+(%d, %d)+(%d, %d), size=(%d, %d)\n",
 	     __FUNCTION__,
-	     pixmap ? pixmap->drawable.serialNumber : 0, op,
+	     pixmap ? pixmap->drawable.serialNumber : 0,
+		 pixmap ? pixmap->usage_hint : 0, op,
 	     get_picture_id(src), src_x, src_y,
 	     get_picture_id(mask), mask_x, mask_y,
 	     get_picture_id(dst), dst_x, dst_y,

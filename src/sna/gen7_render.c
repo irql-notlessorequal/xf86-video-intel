@@ -3263,7 +3263,7 @@ gen7_render_copy(struct sna *sna, uint8_t alu,
 		 PixmapPtr dst, struct kgem_bo *dst_bo,
 		 struct sna_copy_op *op)
 {
-	DBG(("%s (alu=%d, src=(%dx%d), dst=(%dx%d))\n",
+	DBG(("%s(alu=%d, src=(%dx%d), dst=(%dx%d))\n",
 	     __FUNCTION__, alu,
 	     src->drawable.width, src->drawable.height,
 	     dst->drawable.width, dst->drawable.height));
