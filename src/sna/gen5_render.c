@@ -2353,7 +2353,7 @@ gen5_render_copy_boxes(struct sna *sna, uint8_t alu,
 {
 	struct sna_composite_op tmp;
 
-	DBG(("%s alu=%d, src=%ld:handle=%d, dst=%ld:handle=%d boxes=%d x [((%d, %d), (%d, %d))...], flags=%x\n",
+	DBG(("%s: alu=%d, src=%ld:handle=%d, dst=%ld:handle=%d boxes=%d x [((%d, %d), (%d, %d))...], flags=%x\n",
 	     __FUNCTION__, alu,
 	     src->serialNumber, src_bo->handle,
 	     dst->serialNumber, dst_bo->handle,
@@ -2586,7 +2586,7 @@ gen5_render_copy(struct sna *sna, uint8_t alu,
 		 PixmapPtr dst, struct kgem_bo *dst_bo,
 		 struct sna_copy_op *op)
 {
-	DBG(("%s (alu=%d)\n", __FUNCTION__, alu));
+	DBG(("%s(alu=%d)\n", __FUNCTION__, alu));
 
 	if (sna_blt_compare_depth(&src->drawable, &dst->drawable) &&
 	    sna_blt_copy(sna, alu,

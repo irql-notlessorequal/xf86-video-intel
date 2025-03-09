@@ -257,12 +257,12 @@ static PixmapPtr sna_dri3_pixmap_from_fd(ScreenPtr screen,
 		goto free_bo;
 	}
 
-	pixmap = sna_pixmap_create_unattached(screen, 0, 0, depth);
+	pixmap = sna_pixmap_create_unattached_with_hint(screen, width, height, depth, SNA_PIXMAP_USAGE_DRI3_IMPORT);
 	if (pixmap == NullPixmap)
 		goto free_bo;
 
 	if (!screen->ModifyPixmapHeader(pixmap, width, height,
-					depth, bpp, stride, NULL))
+			depth, bpp, stride, NULL))
 		goto free_pixmap;
 
 	priv = sna_pixmap_attach_to_bo(pixmap, bo);
