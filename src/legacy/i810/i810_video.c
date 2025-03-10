@@ -190,28 +190,30 @@ void I810InitVideo(ScreenPtr screen)
 /* client libraries expect an encoding */
 static XF86VideoEncodingRec DummyEncoding[1] =
 {
- {
-   0,
-   "XV_IMAGE",
-   IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT,
-   {1, 1}
- }
+	{
+		0,
+		"XV_IMAGE",
+		IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT,
+		{1, 1}
+	}
 };
 
 #define NUM_FORMATS 3
 
 static XF86VideoFormatRec Formats[NUM_FORMATS] = 
 {
-  {15, TrueColor}, {16, TrueColor}, {24, TrueColor}
+	{15, TrueColor},
+	{16, TrueColor},
+	{24, TrueColor}
 };
 
 #define NUM_ATTRIBUTES 3
 
 static XF86AttributeRec Attributes[NUM_ATTRIBUTES] =
 {
-   {XvSettable | XvGettable, 0, (1 << 24) - 1, "XV_COLORKEY"},
-   {XvSettable | XvGettable, -128, 127, "XV_BRIGHTNESS"},
-   {XvSettable | XvGettable, 0, 255, "XV_CONTRAST"}
+	{XvSettable | XvGettable, 0, (1 << 24) - 1, (char *)"XV_COLORKEY"},
+	{XvSettable | XvGettable, -128, 127, (char *)"XV_BRIGHTNESS"},
+	{XvSettable | XvGettable, 0, 255, (char *)"XV_CONTRAST"}
 };
 
 #define NUM_IMAGES 6
