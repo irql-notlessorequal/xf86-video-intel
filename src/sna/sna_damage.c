@@ -51,7 +51,16 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 struct sna_damage_box
 {
 	struct list list;
-	unsigned long size;
+	int size;
+	/**
+	 * TODO(irql):
+	 * This is being padded by 4-bytes that could be saved by converting
+	 * our `size` to a ULONG.
+	 * 
+	 * Problem is:
+	 * This breaks `__sna_damage_reduce` and probably a bunch of other functions as well
+	 * that interact with the variable.
+	 */
 };
 
 static struct sna_damage *__freed_damage;
