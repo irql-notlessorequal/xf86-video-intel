@@ -655,7 +655,7 @@ int intel_open_device(int entity_num,
 #else
 			xf86Msg(X_ERROR, "[intel::intel_open_device] Workaround unavailable, making a bold assumption instead.\n");
 #endif
-			dev->render_node = "/dev/dri/renderD128";
+			strcpy(dev->render_node, "/dev/dri/renderD128");
 		}
 
 #if HAS_DEBUG_FULL

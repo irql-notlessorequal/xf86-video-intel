@@ -7424,8 +7424,6 @@ out:
 
 static bool sna_copy_area_should_fallback(struct sna *sna, GCPtr gc, DrawablePtr src, DrawablePtr dst)
 {
-	PixmapPtr src_pixmap = get_drawable_pixmap(src);
-
 	if (FORCE_FALLBACK)
 		return true;
 
@@ -9336,7 +9334,8 @@ sna_poly_zero_line_blt(DrawablePtr drawable,
 		       GCPtr gc, int mode, const int _n, const DDXPointRec * const _pt,
 		       const BoxRec *extents, unsigned clipped)
 {
-	static void * const _jump[] = {
+	static void * const _jump[] =
+	{
 		&&no_damage,
 		&&damage,
 
@@ -9348,7 +9347,9 @@ sna_poly_zero_line_blt(DrawablePtr drawable,
 	struct sna *sna = to_sna_from_pixmap(pixmap);
 	int x2, y2, xstart, ystart, oc2;
 	unsigned int bias = miGetZeroLineBias(drawable->pScreen);
+#if 0
 	bool degenerate = true;
+#endif
 	struct sna_fill_op fill;
 	RegionRec clip;
 	BoxRec box[512], *b, * const last_box = box + ARRAY_SIZE(box);
@@ -9417,7 +9418,9 @@ sna_poly_zero_line_blt(DrawablePtr drawable,
 			if (x2 == x1 && y2 == y1)
 				continue;
 
+#if 0
 			degenerate = false;
+#endif
 
 			oc2 = 0;
 			OUTCODES(oc2, x2, y2, extents);
@@ -9447,13 +9450,14 @@ sna_poly_zero_line_blt(DrawablePtr drawable,
 				}
 				b->x2++;
 				b->y2++;
-				if (oc1 | oc2) {
-					bool intersects;
 
-					intersects = box_intersect(b, extents);
-					assert(intersects);
+				if (oc1 | oc2)
+				{
+					assert(box_intersect(b, extents));
 				}
-				if (++b == last_box) {
+
+				if (++b == last_box)
+				{
 					ret = &&rectangle_continue;
 					goto *jump;
 rectangle_continue:
