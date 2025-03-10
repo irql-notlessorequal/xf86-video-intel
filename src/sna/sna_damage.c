@@ -185,7 +185,7 @@ static struct sna_damage *_sna_damage_create(void)
 		damage = __freed_damage;
 		__freed_damage = *(void **)__freed_damage;
 	} else {
-		damage = malloc(sizeof(*damage));
+		damage = malloc(sizeof(struct sna_damage));
 		if (damage == NULL)
 			return NULL;
 	}
