@@ -257,7 +257,16 @@ static PixmapPtr sna_dri3_pixmap_from_fd(ScreenPtr screen,
 		goto free_bo;
 	}
 
-	pixmap = sna_pixmap_create_unattached_with_hint(screen, width, height, depth, SNA_PIXMAP_USAGE_DRI3_IMPORT);
+	int flags = 0;
+	/**
+	 * CPU pixmaps generally don't need this if I am correct about this.
+	 * 
+	 * Should let the BLT engine still pretend to exist.
+	 */
+	if (!bo->snoop)
+		flags = SNA_PIXMAP_USAGE_DRI3_IMPORT;
+
+	pixmap = sna_pixmap_create_unattached_with_hint(screen, width, height, depth, flags);
 	if (pixmap == NullPixmap)
 		goto free_bo;
 

@@ -366,12 +366,11 @@ sna_present_get_crtc(WindowPtr window)
 	struct sna *sna = to_sna_from_drawable(&window->drawable);
 	BoxRec box;
 	xf86CrtcPtr crtc;
-	int usage_hint = get_window_pixmap(window)->usage_hint;
 
 	DBG(("%s: window=%ld (pixmap=%ld usage=%u), box=(%d, %d)x(%d, %d)\n",
 	     __FUNCTION__, window->drawable.id, 
 		 get_window_pixmap(window)->drawable.serialNumber,
-		 usage_hint,
+		 get_window_pixmap(window)->usage_hint,
 	     window->drawable.x, window->drawable.y,
 	     window->drawable.width, window->drawable.height));
 

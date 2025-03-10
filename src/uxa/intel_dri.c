@@ -391,8 +391,8 @@ static void I830DRI2DestroyBuffer2(ScreenPtr unused, DrawablePtr draw, DRI2Buffe
 {
 	if (buffer && buffer->driverPrivate) {
 		I830DRI2BufferPrivatePtr private = buffer->driverPrivate;
-		if (--private->refcnt == 0) {
-			ScreenPtr screen = private->pixmap->drawable.pScreen;
+		if (--private->refcnt == 0)
+		{
 			uxaDestroyPixmap(private->pixmap);
 
 			free(private);
