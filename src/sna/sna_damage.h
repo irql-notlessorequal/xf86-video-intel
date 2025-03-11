@@ -13,6 +13,7 @@ struct sna_damage
 	
 	int remain;
 
+	bool dirty;
 	/**
 	 * Well done `sna_damage_mode`, you get an award for being
 	 * the only actual place to use the packed attribute.
@@ -23,8 +24,6 @@ struct sna_damage
 		DAMAGE_SUBTRACT,
 		DAMAGE_ALL,
 	} mode;
-
-	bool dirty;
 
 	struct {
 		struct list list;
