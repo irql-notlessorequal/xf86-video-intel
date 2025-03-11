@@ -118,8 +118,8 @@ struct sna_composite_op
 			uint32_t br13;
 			uint32_t pixel;
 
-			uint32_t bpp : 6;
-			uint32_t alu : 4;
+			uint8_t bpp;
+			uint8_t alu;
 
 			bool inplace;
 			bool overwrites;
