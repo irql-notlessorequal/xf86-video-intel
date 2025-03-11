@@ -259,11 +259,9 @@ static PixmapPtr sna_dri3_pixmap_from_fd(ScreenPtr screen,
 
 	int flags = 0;
 	/**
-	 * CPU pixmaps generally don't need this if I am correct about this.
-	 * 
-	 * Should let the BLT engine still pretend to exist.
+	 * If it's linear, likely it's from an external source.
 	 */
-	if (!bo->snoop)
+	if (bo->tiling == I915_TILING_NONE)
 		flags = SNA_PIXMAP_USAGE_DRI3_IMPORT;
 
 	pixmap = sna_pixmap_create_unattached_with_hint(screen, width, height, depth, flags);
