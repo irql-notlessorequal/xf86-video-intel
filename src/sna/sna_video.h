@@ -110,7 +110,10 @@ struct sna_video {
 
 	unsigned color_key;
 	unsigned color_key_changed;
+	
 	bool has_color_key;
+	bool tiled;
+	bool textured;
 
 	unsigned colorspace;
 	unsigned colorspace_changed;
@@ -121,8 +124,6 @@ struct sna_video {
 	int width, height, format;
 
 	int alignment;
-	bool tiled;
-	bool textured;
 
 	struct kgem_bo *bo[4];
 	RegionRec clip;
