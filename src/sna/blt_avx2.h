@@ -236,52 +236,77 @@ memcpy_between_tiled_x__swizzle_0__avx2(const void *src, void *dst, int bpp,
 	const unsigned tile_shift = ffs(tile_pixels) - 1;
 	const unsigned tile_mask = tile_pixels - 1;
 
+	unsigned ox, lx;
+
 	DBG(("%s(bpp=%d): src=(%d, %d), dst=(%d, %d), size=%dx%d, pitch=%d/%d\n",
 	     __FUNCTION__, bpp, src_x, src_y, dst_x, dst_y, width, height, src_stride, dst_stride));
 	assert(src != dst);
+
+	width *= cpp;
+	dst_stride *= tile_height;
+	src_stride *= tile_height;
+
 	assert((dst_x & tile_mask) == (src_x & tile_mask));
+	if (dst_x & tile_mask)
+	{
+		ox = (dst_x & tile_mask) * cpp;
+		lx = min(tile_width - ox, width);
+		assert(lx != 0);
+	}
+	else
+	{
+		lx = 0;
+	}
+
+	if (dst_x)
+		dst = (uint8_t *)dst + (dst_x >> tile_shift) * tile_size;
+	if (src_x)
+		src = (const uint8_t *)src + (src_x >> tile_shift) * tile_size;
 
 	while (height--)
 	{
-		unsigned w = width * cpp;
-		uint8_t *dst_row = dst;
-		const uint8_t *src_row = src;
+		const uint8_t *src_row;
+		uint8_t *dst_row;
+		unsigned w = width;
 
-		dst_row += dst_y / tile_height * dst_stride * tile_height;
+		dst_row = dst;
+		dst_row += dst_y / tile_height * dst_stride;
 		dst_row += (dst_y & (tile_height-1)) * tile_width;
-		if (dst_x)
-			dst_row += (dst_x >> tile_shift) * tile_size;
 		dst_y++;
 
-		src_row += src_y / tile_height * src_stride * tile_height;
+		src_row = src;
+		src_row += src_y / tile_height * src_stride;
 		src_row += (src_y & (tile_height-1)) * tile_width;
-		if (src_x)
-			src_row += (src_x >> tile_shift) * tile_size;
 		src_y++;
 
-		if (dst_x & tile_mask)
+		if (lx)
 		{
-			const unsigned x = (dst_x & tile_mask) * cpp;
-			const unsigned len = min(tile_width - x, w);
-
-			to_memcpy_avx2(
-				assume_misaligned(dst_row + x, tile_width, x),
-				assume_misaligned(src_row + x, tile_width, x), len);
-
+			to_memcpy_avx2(dst_row + ox, src_row + ox, lx);
 			dst_row += tile_size;
 			src_row += tile_size;
-			w -= len;
+			w -= lx;
 		}
 
-		while (w >= tile_width) {
-			to_memcpy_avx2(
-				assume_aligned(dst_row, tile_width), assume_aligned(src_row, tile_width), tile_width);
+		while (w >= tile_width)
+		{
+			assert(((uintptr_t)dst_row & (tile_width - 1)) == 0);
+			assert(((uintptr_t)src_row & (tile_width - 1)) == 0);
+			to_memcpy_avx2(assume_aligned(dst_row, tile_width),
+				    assume_aligned(src_row, tile_width),
+				    tile_width);
 			dst_row += tile_size;
 			src_row += tile_size;
 			w -= tile_width;
 		}
 
-		to_memcpy_avx2(assume_aligned(dst_row, tile_width), assume_aligned(src_row, tile_width), w);
+		if (w)
+		{
+			assert(((uintptr_t)dst_row & (tile_width - 1)) == 0);
+			assert(((uintptr_t)src_row & (tile_width - 1)) == 0);
+			to_memcpy_avx2(assume_aligned(dst_row, tile_width),
+				  assume_aligned(src_row, tile_width),
+				  w);
+		}
 	}
 }
 

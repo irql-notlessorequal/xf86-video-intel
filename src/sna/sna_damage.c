@@ -48,10 +48,20 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * cheapy discard no-ops.
  */
 
-struct sna_damage_box {
+struct sna_damage_box
+{
 	struct list list;
 	int size;
-} __attribute__((packed));
+	/**
+	 * TODO(irql):
+	 * This is being padded by 4-bytes that could be saved by converting
+	 * our `size` to a ULONG.
+	 * 
+	 * Problem is:
+	 * This breaks `__sna_damage_reduce` and probably a bunch of other functions as well
+	 * that interact with the variable.
+	 */
+};
 
 static struct sna_damage *__freed_damage;
 
@@ -184,7 +194,7 @@ static struct sna_damage *_sna_damage_create(void)
 		damage = __freed_damage;
 		__freed_damage = *(void **)__freed_damage;
 	} else {
-		damage = malloc(sizeof(*damage));
+		damage = malloc(sizeof(struct sna_damage));
 		if (damage == NULL)
 			return NULL;
 	}

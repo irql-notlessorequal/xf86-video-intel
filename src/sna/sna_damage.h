@@ -5,20 +5,26 @@
 
 #include "compiler.h"
 
-struct sna_damage {
-	BoxRec extents;
+struct sna_damage
+{
 	pixman_region16_t region;
+	BoxRec extents;
+	BoxPtr box;
 	
-	enum sna_damage_mode {
+	int remain;
+
+	bool dirty;
+	/**
+	 * Well done `sna_damage_mode`, you get an award for being
+	 * the only actual place to use the packed attribute.
+	 */
+	enum __attribute__((__packed__)) sna_damage_mode
+	{
 		DAMAGE_ADD = 0,
 		DAMAGE_SUBTRACT,
 		DAMAGE_ALL,
 	} mode;
 
-	unsigned int dirty : 1;
-
-	int remain;
-	BoxPtr box;
 	struct {
 		struct list list;
 		int size;

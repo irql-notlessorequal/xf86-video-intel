@@ -30,16 +30,17 @@
 #define uxaDestroyPixmap(value) dixDestroyPixmap(value, 0)
 #endif
 
-struct intel_uxa_pixmap {
+struct intel_uxa_pixmap
+{
+	struct list batch;
 	dri_bo *bo;
 
-	struct list batch;
+	bool dirty;
+	bool offscreen;
 
 	uint8_t tiling;
-	int8_t busy :2;
-	uint8_t dirty :1;
-	uint8_t offscreen :1;
-	uint8_t pinned :5;
+	int8_t busy;
+	uint8_t pinned;
 #define PIN_SCANOUT 0x1
 #define PIN_DRI2 0x2
 #define PIN_DRI3 0x4

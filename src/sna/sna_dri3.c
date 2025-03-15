@@ -257,7 +257,14 @@ static PixmapPtr sna_dri3_pixmap_from_fd(ScreenPtr screen,
 		goto free_bo;
 	}
 
-	pixmap = sna_pixmap_create_unattached_with_hint(screen, width, height, depth, SNA_PIXMAP_USAGE_DRI3_IMPORT);
+	int flags = 0;
+	/**
+	 * If it's linear, likely it's from an external source.
+	 */
+	if (bo->tiling == I915_TILING_NONE)
+		flags = SNA_PIXMAP_USAGE_DRI3_IMPORT;
+
+	pixmap = sna_pixmap_create_unattached_with_hint(screen, width, height, depth, flags);
 	if (pixmap == NullPixmap)
 		goto free_bo;
 
