@@ -1,3 +1,76 @@
+Snapshot 3.0.0-pre1 (XXXX-XX-XX)
+
+This is the beginning of my fork, uh it's a bit chaotic but in summary,
+most of the work is on SNA, UXA remains mostly untouched barring some minor
+struct optimization and tweaks.
+
+ * Avoid blitting null regions, which would crash the driver.
+
+ * Correctly fallback to a S/W cursor if a H/W cursor is invalid
+
+ * Add the "Intel HD Graphics 630" into the hardware table,
+   so it is no longer pre-release hardware
+
+ * Update the driver to use "crocus" and "iris"
+
+ * Make Cherryview (CHV) default to "crocus"
+
+ * Update the screen naming scheme to match modesetting.
+
+ * Re-add asynchronous swapping as a (HIGHLY) experimental option.
+
+ * Support `CreateBuffer2` and `DestroyBuffer2` in SNA.
+
+ * Restore fast-BLT logic for HSW/IVY if mitigations are disabled in the kernel.
+
+ * Prefer Y-tiling for all internal non-scanout buffers.
+
+ * Implement `dri3_open_client` in SNA.
+
+ * Implement `CopyRegion2` in SNA.
+
+ * Re-introduce the "Throttle" configuration option in SNA.
+
+ * Implement `CopyRegion2` in UXA.
+
+ * Fix broken hardware acceleration due to bad GPU selection logic
+   when a NVIDIA GPU is also present.
+
+ * Introduce the bare framework for EGA, "Everything Graphically Accelerated"
+
+   This currently does not function, don't bother trying.
+
+ * Use the fastest clocksource available per platform in SNA and UXA.
+
+ * Add an option to directly scanout Y-tiling.
+
+   This option:
+   - Only works on Skylake and equivalent.
+   - Will break horribly with multiple GPUs/PRIME.
+
+ * Update the internal driver code to adapt for future Xorg changes
+
+ * Improved per architecture optimization in SNA.
+
+ * Call `DRI2UpdatePrime` in SNA.
+
+ * Use a more accurate algorithm from modesetting in sna_dri2_schedule_wait_msc.
+
+ * Implement sna_emit_wait_for_scanline_skl in SNA.
+
+ * Optimize structs within the driver.
+
+   This provides literally zero performance benefit, it's just that my pahole integration
+   will no longer bother me for the next ten years.
+
+ * Add an AVX2 BLT path in SNA.
+
+ * Fix PRIME flipping hanging the entire Xorg session.
+
+ * Clean up several warnings within the main codebase.
+
+==========================================================================
+
 Snapshot 2.99.917 (2014-12-21)
 ==============================
 3 months drifted by whilst I looked elsewhere for bugs.. The highlight of
