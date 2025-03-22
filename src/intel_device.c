@@ -642,11 +642,14 @@ int intel_open_device(int entity_num,
 		dev->render_node = dev->master_node;
 
 	/**
-	 * Check if we have nvidia-drm loaded. find_render_node() is broken and will pick up the wrong node
-	 * if the NVIDIA driver acts as the PRIMARY DRM node.
+	 * Check if we've had our DRM file card layout messed with.
+	 * 
+	 * find_render_node() is broken and will pick up the wrong node
+	 * if the NVIDIA driver is present or we're a modern Linux system with simpledrm.
 	 */
-	if (__requires_nvidia_drm_workaround(dev)) {
-		xf86Msg(X_WARNING, "[intel::intel_open_device] NVIDIA driver detected, applying workaround.\n");
+	if (__requires_drm_workaround(dev))
+	{
+		xf86Msg(X_WARNING, "[intel::intel_open_device] Non-standard DRM device layout detected, applying workaround.\n");
 
 		if (!__get_correct_render_node(dev))
 		{
@@ -1043,64 +1046,34 @@ int __get_correct_render_node(struct intel_device *dev)
 }
 #endif
 
-int __requires_nvidia_drm_workaround(struct intel_device *dev)
+int __requires_drm_workaround(struct intel_device *dev)
 {
 	/* Check if we're root or DRM master, if so then workaround not required. */
 	if (strcmp(dev->master_node, "/dev/dri/card0") == 0)
 	{
 #if HAS_DEBUG_FULL
-		xf86Msg(X_DEBUG, "[intel::__requires_nvidia_drm_workaround] STRCMP OK.\n");
+		xf86Msg(X_DEBUG, "[intel::__requires_drm_workaround] STRCMP OK.\n");
 #endif
 		return 0;
 	}
 
 	/* Must be RD_WR as we will be sending an IOCTL to it. */
-	int fd_root = open("/dev/dri/card0", O_RDWR);
+	int fd_root = open("/dev/dri/by-path/pci-0000:00:02.0-card", O_RDONLY);
 	if (!fd_root)
 	{
-		xf86Msg(X_ERROR, "[intel::__requires_nvidia_drm_workaround] FD_ROOT returned an error.\n");
+		xf86Msg(X_ERROR, "[intel::__requires_drm_workaround] FD_ROOT returned an error.\n");
 		return 0;
 	}
 
 	int fd_curr = open(dev->master_node, O_RDONLY);
-	/* Same card instance, don't worry about it. */
-	if (intel_is_same_file(fd_root, fd_curr))
+	if (!fd_curr)
 	{
-#if HAS_DEBUG_FULL
-		xf86Msg(X_NONE, "[intel::__requires_nvidia_drm_workaround] FD_ROOT is same as FD_CURR.\n");
-#endif
-		close(fd_curr);
-		close(fd_root);
-		return 0;
+		xf86Msg(X_ERROR, "[intel::__requires_drm_workaround] FD_CURR returned an error.\n");
+		return 0;		
 	}
 
-	/**
-	 * Previously we checked if 'fd_root' was nvidia-drm, while this tends to work,
-	 * if we insert a third GPU, everything goes wrong. Oops.
-	 * 
-	 * Check how many GPUs we have present and then make a dumb choice.
-	 */
-	int gpu_count = __get_render_node_count();
-
-	if (gpu_count <= 1)
-	{
-		/* Something went wrong, bail out. */
-		return false;
-	}
-	else if (gpu_count == 2)
-	{
-		drmVersionPtr version = drmGetVersion(fd_root);
-
-		close(fd_curr);
-		close(fd_root);
-		return strcmp(version->name, "nvidia-drm") == 0;
-	}
-	else
-	{
-		/* We likely need to use the workaround, no I can't bothered to iterate and check. */
-
-		close(fd_curr);
-		close(fd_root);
-		return true;
-	}
+	bool ret = intel_is_same_file(fd_root, fd_curr);
+	close(fd_curr);
+	close(fd_root);
+	return ret;
 }

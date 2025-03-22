@@ -166,7 +166,7 @@ char *intel_str_replace(char *orig, char *rep, char *with);
 int intel_is_same_file(int fd1, int fd2);
 int __get_render_node_count(void);
 int __get_correct_render_node(struct intel_device *dev);
-int __requires_nvidia_drm_workaround(struct intel_device *dev);
+int __requires_drm_workaround(struct intel_device *dev);
 
 void intel_detect_chipset(ScrnInfoPtr scrn, struct intel_device *dev);
 
