@@ -74,9 +74,9 @@
 #endif
 
 #if HAS_GCC(4, 6) && defined(__OPTIMIZE__)
-#define fast __attribute__((optimize("Os")))
+#define fast __attribute__((optimize("Ofast")))
 #elif defined(HAS_CLANG) && defined(__OPTIMIZE__)
-#define fast __attribute__((optimize("Os")))
+#define fast __attribute__((optimize("Ofast")))
 #else
 #define fast
 #endif
