@@ -586,7 +586,7 @@ void choose_memcpy_tiled_x(struct kgem *kgem, int swizzling, unsigned cpu)
 		break;
 	case I915_BIT_6_SWIZZLE_NONE:
 		DBG(("%s: no swizzling\n", __FUNCTION__));
-#if defined(avx2)
+#if defined(sse4_2)
 		if (cpu & SSE4_2)
 		{
 			kgem->memcpy_to_tiled_x = memcpy_to_tiled_x__swizzle_0__sse42;
