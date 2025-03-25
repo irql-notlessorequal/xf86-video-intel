@@ -1321,7 +1321,11 @@ static inline uint64_t add4(const BoxRec *b, int16_t x, int16_t y)
 {
 	union {
 		uint64_t v;
+#if defined(HAS_VECTOR_EXTENSIONS)
+		v4si i;
+#else
 		int16_t i[4];
+#endif	
 	} vi;
 	vi.v = *(uint64_t *)b;
 	vi.i[0] += x;
