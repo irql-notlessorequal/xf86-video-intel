@@ -57,6 +57,15 @@
 #define page_aligned
 #endif
 
+#if HAS_GCC(4, 6) || defined(HAS_CLANG)
+#define HAS_VECTOR_EXTENSIONS 1
+typedef unsigned char u8x2 __attribute__ ((vector_size (2)));
+typedef int v4si __attribute__ ((vector_size (16)));
+typedef float v4sf __attribute__ ((vector_size (16)));
+typedef double v4df __attribute__ ((vector_size (32)));
+typedef unsigned long long v4di __attribute__ ((vector_size (32)));
+#endif
+
 #if defined(__GNUC__) && (__GNUC__ > 2) && defined(__OPTIMIZE__)
 #define fastcall __attribute__((regparm(3)))
 #elif defined(__clang__) && defined(__OPTIMIZE__)
