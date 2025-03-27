@@ -49,6 +49,18 @@ static bool have_sse2(void)
 }
 #endif
 
+#if __x86_64__
+static bool have_sse42(void)
+{
+	static int sse42_present = -1;
+
+	if (sse42_present == -1)
+		sse42_present = sna_cpu_detect() & SSE4_2;
+
+	return sse42_present;
+}
+#endif
+
 fast void
 memcpy_blt(const void *src, void *dst, int bpp,
 	   int32_t src_stride, int32_t dst_stride,
@@ -640,12 +652,6 @@ memmove_box(const void *src, void *dst,
 	    int dx, int dy)
 {
 #define FORCE_MEMMOVE 0
-	union {
-		uint8_t u8;
-		uint16_t u16;
-		uint32_t u32;
-		uint64_t u64;
-	} tmp;
 	const uint8_t *src_bytes;
 	uint8_t *dst_bytes;
 	int width, height;
@@ -671,118 +677,29 @@ memmove_box(const void *src, void *dst,
 	width = (box->x2 - box->x1) * bpp;
 	height = (box->y2 - box->y1);
 	assert(width <= stride);
-	if (width == stride) {
+
+	if (width == stride)
+	{
 		width *= height;
 		height = 1;
 	}
 
-	if (dy >= 0) {
-		switch (width) {
-		case 1:
-			do {
-				*dst_bytes = tmp.u8 = *src_bytes;
-				src_bytes += stride;
-				dst_bytes += stride;
-			} while (--height);
-			break;
-
-		case 2:
-			do {
-				*(uint16_t *)dst_bytes = tmp.u16 = *(const uint16_t *)src_bytes;
-				src_bytes += stride;
-				dst_bytes += stride;
-			} while (--height);
-			break;
-
-		case 4:
-			do {
-				*(uint32_t *)dst_bytes = tmp.u32 = *(const uint32_t *)src_bytes;
-				src_bytes += stride;
-				dst_bytes += stride;
-			} while (--height);
-			break;
-
-		case 8:
-			do {
-				*(uint64_t *)dst_bytes = tmp.u64 = *(const uint64_t *)src_bytes;
-				src_bytes += stride;
-				dst_bytes += stride;
-			} while (--height);
-			break;
-
-		default:
-			if (FORCE_MEMMOVE ||
-			    (dst_bytes < src_bytes + width &&
-			     src_bytes < dst_bytes + width)) {
-				do {
-					memmove(dst_bytes, src_bytes, width);
-					src_bytes += stride;
-					dst_bytes += stride;
-				} while (--height);
-			} else {
-				do {
-					memcpy(dst_bytes, src_bytes, width);
-					src_bytes += stride;
-					dst_bytes += stride;
-				} while (--height);
-			}
-			break;
-		}
-	} else {
-		src_bytes += (height-1) * stride;
-		dst_bytes += (height-1) * stride;
-
-		switch (width) {
-		case 1:
-			do {
-				*dst_bytes = tmp.u8 = *src_bytes;
-				src_bytes -= stride;
-				dst_bytes -= stride;
-			} while (--height);
-			break;
-
-		case 2:
-			do {
-				*(uint16_t *)dst_bytes = tmp.u16 = *(const uint16_t *)src_bytes;
-				src_bytes -= stride;
-				dst_bytes -= stride;
-			} while (--height);
-			break;
-
-		case 4:
-			do {
-				*(uint32_t *)dst_bytes = tmp.u32 = *(const uint32_t *)src_bytes;
-				src_bytes -= stride;
-				dst_bytes -= stride;
-			} while (--height);
-			break;
-
-		case 8:
-			do {
-				*(uint64_t *)dst_bytes = tmp.u64 = *(const uint64_t *)src_bytes;
-				src_bytes -= stride;
-				dst_bytes -= stride;
-			} while (--height);
-			break;
-
-		default:
-			if (FORCE_MEMMOVE ||
-			    (dst_bytes < src_bytes + width &&
-			     src_bytes < dst_bytes + width)) {
-				do {
-					memmove(dst_bytes, src_bytes, width);
-					src_bytes -= stride;
-					dst_bytes -= stride;
-				} while (--height);
-			} else {
-				do {
-					memcpy(dst_bytes, src_bytes, width);
-					src_bytes -= stride;
-					dst_bytes -= stride;
-				} while (--height);
-			}
-			break;
-		}
+#if defined(sse4_2) && defined(__x86_64__)
+	if (likely(have_sse42()))
+	{
+		to_memcpy_sse42(dst_bytes, src_bytes, width);
+	}
+	else
+#endif
+#if defined(sse2)
+	if (likely(have_sse2()))
+	{
+		to_memcpy_sse2(dst_bytes, src_bytes, width);
+	}
+	else
+#endif
+	{
+		memcpy(dst_bytes, src_bytes, width);
 	}
 }
 
