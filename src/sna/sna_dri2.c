@@ -1162,7 +1162,7 @@ __sna_dri2_copy_region(struct sna *sna, ScreenPtr screen, DrawablePtr draw, Regi
 		      unsigned flags)
 {
 	PixmapPtr pixmap = get_drawable_pixmap(draw);
-	DrawableRec scratch, *src_draw = &pixmap->drawable, *dst_draw = &pixmap->drawable;
+	DrawableRec scratch, *src_draw, *dst_draw;
 	struct sna_dri2_private *src_priv = get_private(src);
 	struct sna_dri2_private *dst_priv = get_private(dst);
 	pixman_region16_t clip;
@@ -1173,6 +1173,42 @@ __sna_dri2_copy_region(struct sna *sna, ScreenPtr screen, DrawablePtr draw, Regi
 	int16_t dx, dy, sx, sy;
 	unsigned hint;
 	int n;
+
+#if HAS_PIXMAP_SHARING
+	if (unlikely(draw->pScreen != screen))
+	{
+		if (is_front(src->attachment))
+		{
+			src_draw = DRI2UpdatePrime(draw, src);
+			if (!src_draw)
+			{
+				return NULL;
+			}
+		}
+		else
+		{
+			src_draw = &pixmap->drawable;
+		}
+
+		if (is_front(dst->attachment))
+		{
+			dst_draw = DRI2UpdatePrime(draw, dst);
+			if (!dst_draw)
+			{
+				return NULL;
+			}
+		}
+		else
+		{
+			dst_draw = &pixmap->drawable;
+		}
+	}
+	else
+#endif
+	{
+		src_draw = &pixmap->drawable;
+		dst_draw = &pixmap->drawable;
+	}
 
 	/* To hide a stale DRI2Buffer, one may choose to substitute
 	 * pixmap->gpu_bo instead of dst/src->bo, however you then run
@@ -1397,7 +1433,7 @@ __sna_dri2_copy_region(struct sna *sna, ScreenPtr screen, DrawablePtr draw, Regi
 		if (rq && rq != (void *)&sna->kgem) {
 			if (rq->bo == NULL)
 				kgem_submit(&sna->kgem);
-			if (rq->bo) { /* Becareful in case the gpu is wedged */
+			if (rq->bo) { /* Be careful in case the gpu is wedged */
 				bo = ref(rq->bo);
 				DBG(("%s: recording sync fence handle=%d\n",
 				     __FUNCTION__, bo->handle));
@@ -1460,22 +1496,6 @@ sna_dri2_copy_region2(ScreenPtr screen,
 	     region->extents.x1, region->extents.y1,
 	     region->extents.x2, region->extents.y2,
 	     region_num_rects(region)));
-
-#if HAS_PIXMAP_SHARING
-	if (is_front(dst->attachment))
-	{
-		if (draw->pScreen != screen)
-		{
-			draw = DRI2UpdatePrime(draw, dst);
-			
-			if (!draw)
-			{
-				DBG(("%s: DRI2UpdatePrime returned NULL, discarding call.", __FUNCTION__));
-				return;
-			}
-		}
-	}
-#endif
 
 	__sna_dri2_copy_region(sna, screen, draw, region, src, dst, DRI2_DAMAGE);
 }
