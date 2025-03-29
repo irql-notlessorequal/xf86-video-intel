@@ -2277,7 +2277,7 @@ static int gen3_vertex_finish(struct sna *sna)
 	assert(sna->render.vertex_used);
 	assert(sna->render.vertex_used <= sna->render.vertex_size);
 
-	sna_vertex_wait__locked(&sna->render);
+	sna_vertex_wait__locked(sna);
 
 	hint = CREATE_GTT_MAP;
 	bo = sna->render.vbo;
@@ -2421,7 +2421,7 @@ static bool gen3_rectangle_begin(struct sna *sna,
 	struct gen3_render_state *state = &sna->render_state.gen3;
 	int ndwords, i1_cmd = 0, i1_len = 0;
 
-	if (sna_vertex_wait__locked(&sna->render) && sna->render.vertex_offset)
+	if (sna_vertex_wait__locked(sna) && sna->render.vertex_offset)
 		return true;
 
 	ndwords = 2;
@@ -2464,7 +2464,7 @@ static int gen3_get_rectangles__flush(struct sna *sna,
 				      const struct sna_composite_op *op)
 {
 	/* Preventing discarding new vbo after lock contention */
-	if (sna_vertex_wait__locked(&sna->render)) {
+	if (sna_vertex_wait__locked(sna)) {
 		int rem = vertex_space(sna);
 		if (rem > op->floats_per_rect)
 			return rem;
@@ -2534,7 +2534,7 @@ flush:
 		gen3_vertex_flush(sna);
 		gen3_magic_ca_pass(sna, op);
 	}
-	sna_vertex_wait__locked(&sna->render);
+	sna_vertex_wait__locked(sna);
 	_kgem_submit(&sna->kgem);
 	gen3_emit_composite_state(sna, op);
 	assert(sna->render.vertex_offset == 0);
@@ -2649,7 +2649,7 @@ gen3_render_composite_boxes__thread(struct sna *sna,
 {
 	DBG(("%s: nbox=%d\n", __FUNCTION__, nbox));
 
-	sna_vertex_lock(&sna->render);
+	sna_vertex_lock(sna);
 	do {
 		int nbox_this_time;
 		float *v;
@@ -2662,16 +2662,16 @@ gen3_render_composite_boxes__thread(struct sna *sna,
 		sna->render.vertex_used += nbox_this_time * op->floats_per_rect;
 		assert(sna->render.vertex_used <= sna->render.vertex_size);
 
-		sna_vertex_acquire__locked(&sna->render);
-		sna_vertex_unlock(&sna->render);
+		sna_vertex_acquire__locked(sna);
+		sna_vertex_unlock(sna);
 
 		op->emit_boxes(op, box, nbox_this_time, v);
 		box += nbox_this_time;
 
-		sna_vertex_lock(&sna->render);
-		sna_vertex_release__locked(&sna->render);
+		sna_vertex_lock(sna);
+		sna_vertex_release__locked(sna);
 	} while (nbox);
-	sna_vertex_unlock(&sna->render);
+	sna_vertex_unlock(sna);
 }
 
 static void
@@ -4319,7 +4319,7 @@ gen3_render_composite_spans_constant_thread__sse2__boxes(struct sna *sna,
 	     op->base.src.offset[0], op->base.src.offset[1],
 	     op->base.dst.x, op->base.dst.y));
 
-	sna_vertex_lock(&sna->render);
+	sna_vertex_lock(sna);
 	do {
 		int nbox_this_time;
 		float *v;
@@ -4332,8 +4332,8 @@ gen3_render_composite_spans_constant_thread__sse2__boxes(struct sna *sna,
 		sna->render.vertex_used += nbox_this_time * 9;
 		assert(sna->render.vertex_used <= sna->render.vertex_size);
 
-		sna_vertex_acquire__locked(&sna->render);
-		sna_vertex_unlock(&sna->render);
+		sna_vertex_acquire__locked(sna);
+		sna_vertex_unlock(sna);
 
 		do {
 			v[0] = box->box.x2;
@@ -4345,10 +4345,10 @@ gen3_render_composite_spans_constant_thread__sse2__boxes(struct sna *sna,
 			box++;
 		} while (--nbox_this_time);
 
-		sna_vertex_lock(&sna->render);
-		sna_vertex_release__locked(&sna->render);
+		sna_vertex_lock(sna);
+		sna_vertex_release__locked(sna);
 	} while (nbox);
-	sna_vertex_unlock(&sna->render);
+	sna_vertex_unlock(sna);
 }
 
 sse2 fastcall static void
@@ -4774,7 +4774,7 @@ gen3_render_composite_spans_constant_thread_boxes(struct sna *sna,
 	     op->base.src.offset[0], op->base.src.offset[1],
 	     op->base.dst.x, op->base.dst.y));
 
-	sna_vertex_lock(&sna->render);
+	sna_vertex_lock(sna);
 	do {
 		int nbox_this_time;
 		float *v;
@@ -4787,8 +4787,8 @@ gen3_render_composite_spans_constant_thread_boxes(struct sna *sna,
 		sna->render.vertex_used += nbox_this_time * 9;
 		assert(sna->render.vertex_used <= sna->render.vertex_size);
 
-		sna_vertex_acquire__locked(&sna->render);
-		sna_vertex_unlock(&sna->render);
+		sna_vertex_acquire__locked(sna);
+		sna_vertex_unlock(sna);
 
 		do {
 			v[0] = box->box.x2;
@@ -4800,10 +4800,10 @@ gen3_render_composite_spans_constant_thread_boxes(struct sna *sna,
 			box++;
 		} while (--nbox_this_time);
 
-		sna_vertex_lock(&sna->render);
-		sna_vertex_release__locked(&sna->render);
+		sna_vertex_lock(sna);
+		sna_vertex_release__locked(sna);
 	} while (nbox);
-	sna_vertex_unlock(&sna->render);
+	sna_vertex_unlock(sna);
 }
 
 fastcall static void
@@ -4864,7 +4864,7 @@ gen3_render_composite_spans_boxes__thread(struct sna *sna,
 	     op->base.src.offset[0], op->base.src.offset[1],
 	     op->base.dst.x, op->base.dst.y));
 
-	sna_vertex_lock(&sna->render);
+	sna_vertex_lock(sna);
 	do {
 		int nbox_this_time;
 		float *v;
@@ -4877,16 +4877,16 @@ gen3_render_composite_spans_boxes__thread(struct sna *sna,
 		sna->render.vertex_used += nbox_this_time * op->base.floats_per_rect;
 		assert(sna->render.vertex_used <= sna->render.vertex_size);
 
-		sna_vertex_acquire__locked(&sna->render);
-		sna_vertex_unlock(&sna->render);
+		sna_vertex_acquire__locked(sna);
+		sna_vertex_unlock(sna);
 
 		op->emit_boxes(op, box, nbox_this_time, v);
 		box += nbox_this_time;
 
-		sna_vertex_lock(&sna->render);
-		sna_vertex_release__locked(&sna->render);
+		sna_vertex_lock(sna);
+		sna_vertex_release__locked(sna);
 	} while (nbox);
-	sna_vertex_unlock(&sna->render);
+	sna_vertex_unlock(sna);
 }
 
 fastcall static void

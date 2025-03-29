@@ -70,18 +70,6 @@
 #include "intel_driver.h"
 #include "fd.h"
 
-struct intel_device
-{
-	char *master_node;
-	char *render_node;
-
-	int device_id;
-	int fd;
-	int idx;
-	int master_count;
-	int open_count;
-};
-
 static int intel_device_key = -1;
 
 static int dump_file(ScrnInfoPtr scrn, const char *path)

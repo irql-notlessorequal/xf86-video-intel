@@ -1228,10 +1228,10 @@ static void blt_composite_fill_boxes_no_offset__thread(struct sna *sna,
 
 	DBG(("%s: %08x x %d\n", __FUNCTION__, blt->pixel, nbox));
 
-	sna_vertex_lock(&sna->render);
+	sna_vertex_lock(sna);
 	assert(kgem->mode == KGEM_BLT);
 	if (!kgem_check_batch(kgem, 3)) {
-		sna_vertex_wait__locked(&sna->render);
+		sna_vertex_wait__locked(sna);
 		sna_blt_fill_begin(sna, blt);
 	}
 
@@ -1251,8 +1251,8 @@ static void blt_composite_fill_boxes_no_offset__thread(struct sna *sna,
 
 		kgem->nbatch += 3 * nbox_this_time;
 		assert(kgem->nbatch < kgem->surface);
-		sna_vertex_acquire__locked(&sna->render);
-		sna_vertex_unlock(&sna->render);
+		sna_vertex_acquire__locked(sna);
+		sna_vertex_unlock(sna);
 
 		while (nbox_this_time >= 8) {
 			b[0] = cmd; *(uint64_t *)(b+1) = *(const uint64_t *)box++;
@@ -1282,15 +1282,15 @@ static void blt_composite_fill_boxes_no_offset__thread(struct sna *sna,
 			b[0] = cmd; *(uint64_t *)(b+1) = *(const uint64_t *)box++;
 		}
 
-		sna_vertex_lock(&sna->render);
-		sna_vertex_release__locked(&sna->render);
+		sna_vertex_lock(sna);
+		sna_vertex_release__locked(sna);
 		if (!nbox)
 			break;
 
-		sna_vertex_wait__locked(&sna->render);
+		sna_vertex_wait__locked(sna);
 		sna_blt_fill_begin(sna, blt);
 	} while (1);
-	sna_vertex_unlock(&sna->render);
+	sna_vertex_unlock(sna);
 }
 
 fastcall static void blt_composite_fill_box(struct sna *sna,
@@ -1347,10 +1347,10 @@ static void blt_composite_fill_boxes__thread(struct sna *sna,
 
 	DBG(("%s: %08x x %d\n", __FUNCTION__, blt->pixel, nbox));
 
-	sna_vertex_lock(&sna->render);
+	sna_vertex_lock(sna);
 	assert(kgem->mode == KGEM_BLT);
 	if (!kgem_check_batch(kgem, 3)) {
-		sna_vertex_wait__locked(&sna->render);
+		sna_vertex_wait__locked(sna);
 		sna_blt_fill_begin(sna, blt);
 	}
 
@@ -1370,8 +1370,8 @@ static void blt_composite_fill_boxes__thread(struct sna *sna,
 
 		kgem->nbatch += 3 * nbox_this_time;
 		assert(kgem->nbatch < kgem->surface);
-		sna_vertex_acquire__locked(&sna->render);
-		sna_vertex_unlock(&sna->render);
+		sna_vertex_acquire__locked(sna);
+		sna_vertex_unlock(sna);
 
 		while (nbox_this_time >= 8) {
 			b[0] = cmd; *(uint64_t *)(b+1) = add4(box++, dx, dy);
@@ -1401,15 +1401,15 @@ static void blt_composite_fill_boxes__thread(struct sna *sna,
 			b[0] = cmd; *(uint64_t *)(b+1) = add4(box++, dx, dy);
 		}
 
-		sna_vertex_lock(&sna->render);
-		sna_vertex_release__locked(&sna->render);
+		sna_vertex_lock(sna);
+		sna_vertex_release__locked(sna);
 		if (!nbox)
 			break;
 
-		sna_vertex_wait__locked(&sna->render);
+		sna_vertex_wait__locked(sna);
 		sna_blt_fill_begin(sna, blt);
 	} while (1);
-	sna_vertex_unlock(&sna->render);
+	sna_vertex_unlock(sna);
 }
 
 fastcall
@@ -1649,7 +1649,7 @@ static void blt_composite_copy_boxes__thread(struct sna *sna,
 
 	DBG(("%s: nbox=%d\n", __FUNCTION__, nbox));
 
-	sna_vertex_lock(&sna->render);
+	sna_vertex_lock(sna);
 
 	if ((dst_dx | dst_dy) == 0) {
 		uint64_t hdr = (uint64_t)br13 << 32 | cmd;
@@ -1767,7 +1767,7 @@ static void blt_composite_copy_boxes__thread(struct sna *sna,
 			kgem_bcs_set_tiling(&sna->kgem, src_bo, dst_bo);
 		} while (1);
 	}
-	sna_vertex_unlock(&sna->render);
+	sna_vertex_unlock(sna);
 }
 
 static void blt_composite_copy_boxes__thread64(struct sna *sna,
@@ -1787,7 +1787,7 @@ static void blt_composite_copy_boxes__thread64(struct sna *sna,
 
 	DBG(("%s: nbox=%d\n", __FUNCTION__, nbox));
 
-	sna_vertex_lock(&sna->render);
+	sna_vertex_lock(sna);
 
 	if ((dst_dx | dst_dy) == 0) {
 		uint64_t hdr = (uint64_t)br13 << 32 | cmd;
@@ -1909,7 +1909,7 @@ static void blt_composite_copy_boxes__thread64(struct sna *sna,
 			kgem_bcs_set_tiling(&sna->kgem, src_bo, dst_bo);
 		} while (1);
 	}
-	sna_vertex_unlock(&sna->render);
+	sna_vertex_unlock(sna);
 }
 
 fastcall static void

@@ -92,7 +92,7 @@ int gen4_vertex_finish(struct sna *sna)
 	assert(sna->render.vertex_used);
 	assert(sna->render.vertex_used <= sna->render.vertex_size);
 
-	sna_vertex_wait__locked(&sna->render);
+	sna_vertex_wait__locked(sna);
 
 	/* Note: we only need dword alignment (currently) */
 

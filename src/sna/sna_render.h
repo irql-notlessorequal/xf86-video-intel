@@ -228,10 +228,15 @@ struct sna_copy_op {
 	void (*done)(struct sna *sna, const struct sna_copy_op *op);
 };
 
-struct sna_render {
+struct sna_render
+{
+#if defined(SNA_HAS_DRM_SYNCOBJ)
+	int syncObjFd;
+#else
 	pthread_mutex_t lock;
 	pthread_cond_t wait;
 	int active;
+#endif
 
 	int max_3d_size;
 	int max_3d_pitch;
@@ -937,34 +942,59 @@ sna_composite_mask_is_opaque(PicturePtr mask);
 
 void sna_vertex_init(struct sna *sna);
 
-static inline void sna_vertex_lock(struct sna_render *r)
+static inline void sna_vertex_lock(struct sna *sna)
 {
-	pthread_mutex_lock(&r->lock);
+#if defined(SNA_HAS_DRM_SYNCOBJ)
+	/* NO-OP */
+#else
+	pthread_mutex_lock(&sna->render.lock);
+#endif
 }
 
-static inline void sna_vertex_acquire__locked(struct sna_render *r)
+static inline void sna_vertex_acquire__locked(struct sna *sna)
 {
-	r->active++;
+#if defined(SNA_HAS_DRM_SYNCOBJ)
+	/** NO-OP */
+#else
+	sna->render.active++;
+#endif
 }
 
-static inline void sna_vertex_unlock(struct sna_render *r)
+static inline void sna_vertex_unlock(struct sna *sna)
 {
-	pthread_mutex_unlock(&r->lock);
+#if defined(SNA_HAS_DRM_SYNCOBJ)
+	/** NO-OP */
+#else
+	pthread_mutex_unlock(&sna->render.lock);
+#endif
 }
 
-static inline void sna_vertex_release__locked(struct sna_render *r)
+static inline void sna_vertex_release__locked(struct sna *sna)
 {
-	assert(r->active > 0);
-	if (--r->active == 0)
-		pthread_cond_signal(&r->wait);
+#if defined(SNA_HAS_DRM_SYNCOBJ)
+	int ret = drmSyncobjSignal(sna->dev->fd, sna->render.syncObjFd, 1);
+	assert(ret == 0);
+#else
+	assert(sna->render.active > 0);
+	if (--sna->render.active == 0)
+		pthread_cond_signal(&sna->render.wait);
+#endif
 }
 
-static inline bool sna_vertex_wait__locked(struct sna_render *r)
+static inline bool sna_vertex_wait__locked(struct sna *sna)
 {
-	bool was_active = r->active;
-	while (r->active)
-		pthread_cond_wait(&r->wait, &r->lock);
+#if defined(SNA_HAS_DRM_SYNCOBJ)
+	int first_signaled;
+	int ret = drmSyncobjWait(sna->dev->fd, sna->render.syncObjFd, 1, 0, 0, &first_signaled);
+	assert(ret == 0);
+
+	return first_signaled != 0;
+#else
+	bool was_active = sna->render.active;
+	while (sna->render.active)
+		pthread_cond_wait(&sna->render.wait, &sna->render.lock);
 	return was_active;
+#endif
 }
 
 #define alphaless(format) PICT_FORMAT(PICT_FORMAT_BPP(format),		\

@@ -31,11 +31,16 @@
 
 #include "sna.h"
 
+#include <xf86drm.h>
 #include <unistd.h>
 
 void sna_vertex_init(struct sna *sna)
 {
+#if defined(SNA_HAS_DRM_SYNCOBJ)
+	assert(drmSyncobjCreate(sna->dev->fd, 0, &sna->render.syncObjFd) == 0);
+#else
 	pthread_mutex_init(&sna->render.lock, NULL);
 	pthread_cond_init(&sna->render.wait, NULL);
 	sna->render.active = 0;
+#endif
 }

@@ -828,6 +828,10 @@ if test "x$debug_msg" = "x"; then
 	debug_msg=" none"
 fi
 
+PKG_CHECK_MODULES([libdrm], [libdrm >= 2.4.99], [], [
+  AC_DEFINE(SNA_HAS_DRM_SYNCOBJ, 1, [SNA can utilize DRM_SYNCOBJ APIs])
+])
+
 AC_CONFIG_LIBOBJ_DIR(libobj)
 AC_REPLACE_FUNCS(getline)
 

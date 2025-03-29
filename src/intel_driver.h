@@ -144,7 +144,18 @@ struct intel_device_info
 	/* Hardware is otherwise not supported. */
 	bool force_ega;
 };
-struct intel_device;
+
+struct intel_device
+{
+	char *master_node;
+	char *render_node;
+
+	int device_id;
+	int fd;
+	int idx;
+	int master_count;
+	int open_count;
+};
 
 int intel_entity_get_devid(int index);
 

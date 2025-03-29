@@ -117,6 +117,10 @@ if get_option('use-create2')
   config.set('USE_CREATE2', 1)
 endif
 
+if dependency('libdrm', version : '>=2.4.99')
+  config.set('SNA_HAS_DRM_SYNCOBJ', 1)
+endif
+
 subdir('brw')
 subdir('fb')
 
