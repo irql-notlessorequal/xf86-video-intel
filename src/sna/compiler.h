@@ -65,6 +65,14 @@
 #define fastcall
 #endif
 
+#if HAS_GCC(4, 6) && defined(__OPTIMIZE__)
+#define fast __attribute__((optimize("Ofast")))
+#elif defined(HAS_CLANG) && defined(__OPTIMIZE__)
+#define fast __attribute__((optimize("Ofast")))
+#else
+#define fast
+#endif
+
 #if HAS_GCC(4, 6)
 #define sse2 fast __attribute__((target("sse2,fpmath=sse,tune=nocona")))
 #define sse4_2 fast __attribute__((target("sse4.2,sse2,fpmath=sse,tune=nehalem")))
@@ -73,20 +81,12 @@
 #define sse4_2 fast __attribute__((target("sse4.2,sse2,fpmath=sse")))
 #endif
 
-#if HAS_GCC(4, 6) && defined(__OPTIMIZE__)
-#define fast __attribute__((optimize("Os")))
-#elif defined(HAS_CLANG) && defined(__OPTIMIZE__)
-#define fast __attribute__((optimize("Os")))
-#else
-#define fast
-#endif
-
 #if HAS_GCC(4, 9)
-#define avx2 fast __attribute__((target("avx2,avx,sse4.2,sse2,fpmath=sse,tune=intel")))
+#define avx2 fast __attribute__((target("arch=core-avx2,no-fma")))
 #define assume_aligned(ptr, align) __builtin_assume_aligned((ptr), (align))
 #define assume_misaligned(ptr, align, offset) __builtin_assume_aligned((ptr), (align), (offset))
 #elif defined(HAS_CLANG)
-#define avx2 fast __attribute__((target("avx2,avx,sse4.2,sse2,fpmath=sse")))
+#define avx2 fast __attribute__((target("avx2,avx,sse4.2,sse2")))
 #define assume_aligned(ptr, align) __builtin_assume_aligned((ptr), (align))
 #define assume_misaligned(ptr, align, offset) __builtin_assume_aligned((ptr), (align), (offset))
 #else
