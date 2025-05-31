@@ -82,7 +82,7 @@
 #endif
 
 #ifndef bit_AVX2
-#define bit_AVX2	(1<<5)
+#define bit_AVX2	(1 << 5)
 #endif
 
 #endif /* SNA_CPUID_H */

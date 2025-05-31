@@ -33,7 +33,7 @@
 #include <pixman.h>
 
 #include "blt_sse2.h"
-#include "blt_sse4_2.h"
+#include "blt_sse42.h"
 
 #if __x86_64__
 #define have_sse2() 1
@@ -589,9 +589,9 @@ void choose_memcpy_tiled_x(struct kgem *kgem, int swizzling, unsigned cpu)
 #if defined(sse4_2)
 		if (cpu & SSE4_2)
 		{
-			kgem->memcpy_to_tiled_x = memcpy_to_tiled_x__swizzle_0__sse42;
-			kgem->memcpy_from_tiled_x = memcpy_from_tiled_x__swizzle_0__sse42;
-			kgem->memcpy_between_tiled_x = memcpy_between_tiled_x__swizzle_0__sse42;
+			kgem->memcpy_to_tiled_x = memcpy_to_tiled_x__swizzle_0__modern;
+			kgem->memcpy_from_tiled_x = memcpy_from_tiled_x__swizzle_0__modern;
+			kgem->memcpy_between_tiled_x = memcpy_between_tiled_x__swizzle_0__modern;
 		} 
 		else
 #endif
