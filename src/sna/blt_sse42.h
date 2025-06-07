@@ -4,36 +4,53 @@
 #pragma GCC target("inline-all-stringops")
 #pragma GCC optimize("Ofast")
 
-#if !defined(__x86_64__)
-static __attribute__((always_inline)) inline void *do_memcpy(void *dest, const void *src, size_t n)
+static __attribute__((always_inline)) inline void* movsb(void* dst, const void* src, size_t size)
 {
-	int d0, d1, d2;
-	asm volatile(
-		"rep ; movsl\n\t"
-		"movl %4,%%ecx\n\t"
-		"rep ; movsb\n\t"
-		: "=&c" (d0), "=&D" (d1), "=&S" (d2)
-		: "0" (n >> 2), "g" (n & 3), "1" (dest), "2" (src)
-		: "memory");
-
-	return dest;
+	__asm__ volatile("rep movsb" : "+D"(dst), "+S"(src), "+c"(size) : : "memory");
+	return dst;
 }
-#else
-static __attribute__((always_inline)) inline void *do_memcpy(void *dest, const void *src, size_t n)
+
+static __attribute__((always_inline)) inline void* movsl(void* dst, const void* src, size_t size)
 {
-	long d0, d1, d2;
-	asm volatile(
-		"rep ; movsq\n\t"
-		"movq %4,%%rcx\n\t"
-		"rep ; movsb\n\t"
-		: "=&c" (d0), "=&D" (d1), "=&S" (d2)
-		: "0" (n >> 3), "g" (n & 7), "1" (dest), "2" (src)
-		: "memory");
-
-	return dest;
+	__asm__ volatile("rep movsl" : "+D"(dst), "+S"(src), "+c"(size) : : "memory");
+	return dst;
 }
-#endif
 
+static __attribute__((always_inline)) inline void* movsw(void* dst, const void* src, size_t size)
+{
+	__asm__ volatile("rep movsw" : "+D"(dst), "+S"(src), "+c"(size) : : "memory");
+	return dst;
+}
+
+static __attribute__((always_inline)) inline void* movsq(void* dst, const void* src, size_t size)
+{
+	__asm__ volatile("rep movsq" : "+D"(dst), "+S"(src), "+c"(size) : : "memory");
+	return dst;
+}
+
+static void* do_memcpy(void *dest, const void *src, size_t len)
+{
+	if (unlikely(len == 0))
+	{
+		return dest;
+	}
+	else if ((((size_t)dest & 7) == 0) && (((size_t)src & 7) == 0) && ((len & 7) == 0))
+	{
+		return movsq(dest, src, len >> 3);
+	}
+	else if ((((size_t)dest & 3) == 0) && (((size_t)src & 3) == 0) && ((len & 3) == 0))
+	{
+		return movsl(dest, src, len >> 2);
+	}
+	else if ((((size_t)dest & 1) == 0) && (((size_t)src & 1) == 0) && ((len & 1) == 0))
+	{
+		return movsw(dest, src, len >> 1);
+	}
+	else
+	{
+		return movsb(dest, src, len);
+	}
+}
 
 static void
 memcpy_to_tiled_x__swizzle_0__modern(const void *src, void *dst, int bpp,
