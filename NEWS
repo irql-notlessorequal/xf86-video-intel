@@ -63,8 +63,6 @@ struct optimization and tweaks.
    This provides literally zero performance benefit, it's just that my pahole integration
    will no longer bother me for the next ten years.
 
- * Add an SSE4.2 optimized BLT path in SNA.
-
  * Fix PRIME flipping hanging the entire Xorg session.
 
  * Clean up several warnings within the main codebase.
