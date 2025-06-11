@@ -37,14 +37,16 @@ fbFillSpans(DrawablePtr drawable, GCPtr gc,
 {
 	DBG(("%s x %d\n", __FUNCTION__, n));
 	while (n--) {
-		BoxRec box;
-
-		memcpy(&box, pt, sizeof(box));
-		box.x2 = box.x1 + *width++;
-		box.y2 = box.y1 + 1;
+		BoxRec box = {
+			.x1 = pt->x,
+			.y1 = pt->y,
+			.x2 = pt->x + *width,
+			.y2 = pt->y + 1,
+		};
 
 		/* XXX fSorted */
 		fbDrawableRun(drawable, gc, &box, fbFillSpan, NULL);
+		width++;
 		pt++;
 	}
 }
@@ -90,12 +92,14 @@ fbSetSpans(DrawablePtr drawable, GCPtr gc,
 
 	data.src = src;
 	while (n--) {
-		BoxRec box;
+		BoxRec box = {
+			.x1 = pt->x,
+			.y1 = pt->y,
+			.x2 = pt->x + *width,
+			.y2 = pt->y + 1,
+		};
 
-		memcpy(&box, pt, sizeof(box));
 		data.pt = *pt;
-		box.x2 = box.x1 + *width;
-		box.y2 = box.y1 + 1;
 
 		fbDrawableRun(drawable, gc, &box, fbSetSpan, &data);
 
