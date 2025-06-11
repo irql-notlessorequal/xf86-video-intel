@@ -5,7 +5,6 @@ shared_library('I810XvMC',
 	       dependencies : [
 		 dependency('xv', required : true),
 		 dependency('x11', required : true),
-		 dependency('xv', required : true),
 		 dependency('xvmc', required : true),
 		 dependency('xorg-server', required : true),
 		 dependency('libdrm', required : true),
