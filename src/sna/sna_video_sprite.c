@@ -115,9 +115,7 @@ static int sna_video_sprite_stop(ddStopVideo_ARGS)
 			xf86DrvMsg(video->sna->scrn->scrnIndex, X_ERROR,
 				   "failed to disable plane\n");
 
-		if (video->bo[index])
-			kgem_bo_destroy(&video->sna->kgem, video->bo[index]);
-		video->bo[index] = NULL;
+		kgem_bo_replace(&video->sna->kgem, &video->bo[index], NULL);
 	}
 
 	sna_window_set_port((WindowPtr)draw, NULL);
@@ -468,18 +466,13 @@ sna_video_sprite_show(struct sna *sna,
 
 	if (drmIoctl(sna->kgem.fd, LOCAL_IOCTL_MODE_SETPLANE, &s)) {
 		DBG(("SET_PLANE failed: ret=%d\n", errno));
-		if (video->bo[index]) {
-			kgem_bo_destroy(&sna->kgem, video->bo[index]);
-			video->bo[index] = NULL;
-		}
+		kgem_bo_replace(&sna->kgem, &video->bo[index], NULL);
 		return false;
 	}
 
 	__kgem_bo_clear_dirty(frame->bo);
 
-	if (video->bo[index])
-		kgem_bo_destroy(&sna->kgem, video->bo[index]);
-	video->bo[index] = kgem_bo_reference(frame->bo);
+	kgem_bo_replace(&sna->kgem, &video->bo[index], frame->bo);
 	return true;
 }
 
