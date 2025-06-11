@@ -3,6 +3,7 @@ shared_library('I810XvMC',
 	       version : '1.0.0',
 	       sources : 'I810XvMC.c',
 	       dependencies : [
+		 dependency('xv', required : true),
 		 dependency('x11', required : true),
 		 dependency('xv', required : true),
 		 dependency('xvmc', required : true),
