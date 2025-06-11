@@ -278,7 +278,7 @@ I810DRIScreenInit(ScreenPtr pScreen)
    }
    pDRIInfo->SAREASize = SAREA_MAX;
 
-   if (!(pI810DRI = (I810DRIPtr) calloc(sizeof(I810DRIRec), 1))) {
+   if (!(pI810DRI = (I810DRIPtr) calloc(1, sizeof(I810DRIRec)))) {
       DRIDestroyInfoRec(pI810->pDRIInfo);
       pI810->pDRIInfo = NULL;
       return FALSE;

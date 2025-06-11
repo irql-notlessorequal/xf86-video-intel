@@ -131,7 +131,8 @@ static void area_tests(struct test *t, int reps, int sets, enum target target)
 {
 	struct test_target tt;
 	XImage image;
-	uint32_t *cells = calloc(sizeof(uint32_t), t->out.width*t->out.height);
+	uint32_t *cells = calloc(t->out.width * t->out.height,
+				 sizeof(uint32_t));
 	int r, s, x, y;
 
 	printf("Testing area sets (%s): ", test_target_name(target));
