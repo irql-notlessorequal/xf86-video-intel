@@ -157,6 +157,7 @@ endif
 
 with_xvmc = get_option('xvmc')
 if with_xvmc
+  dependency('xv', required : true)
   dependency('xvmc', required : true)
   dependency('dri2proto', required : true)
   dependency('x11', required : true)
