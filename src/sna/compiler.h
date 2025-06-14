@@ -35,7 +35,13 @@
 #define likely(expr) (__builtin_expect (!!(expr), 1))
 #define unlikely(expr) (__builtin_expect (!!(expr), 0))
 #define noinline __attribute__((noinline))
-#define force_inline inline /* __attribute__((always_inline)) */
+/**
+ * GCC likes to _not_ inline code even though you told it
+ * to do so.
+ * 
+ * The only way to get it to behave is to force it.
+ */
+#define force_inline __attribute__((always_inline)) inline
 #define must_check __attribute__((warn_unused_result))
 #define constant __attribute__((const))
 #define pure __attribute__((pure))
