@@ -56,120 +56,147 @@
 #endif
 
 static const struct intel_device_info intel_generic_info = {
+	.async_formats = INTEL_DRM_MODIFIERS_UNSUPPORTED,
 	.gen = -1,
 };
 
 static const struct intel_device_info intel_i81x_info = {
+	.async_formats = INTEL_DRM_MODIFIERS_UNSUPPORTED,
 	.gen = 010,
 };
 
 static const struct intel_device_info intel_i830_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 020,
 };
 static const struct intel_device_info intel_i845_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 020,
 };
 static const struct intel_device_info intel_i855_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 021,
 };
 static const struct intel_device_info intel_i865_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 022,
 };
 
 static const struct intel_device_info intel_i915_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 030,
 };
 static const struct intel_device_info intel_i945_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 031,
 };
 
 static const struct intel_device_info intel_g33_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 033,
 };
 
 static const struct intel_device_info intel_i965_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 040,
 };
 
 static const struct intel_device_info intel_g4x_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 045,
 };
 
 static const struct intel_device_info intel_ironlake_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 050,
 };
 
 static const struct intel_device_info intel_sandybridge_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 060,
 };
 
 static const struct intel_device_info intel_ivybridge_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 070,
 	.prefer_y_tiling = 1,
 };
 
 static const struct intel_device_info intel_valleyview_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 071,
 	.prefer_y_tiling = 1,
 };
 
 static const struct intel_device_info intel_haswell_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 075,
 	.prefer_y_tiling = 1,
 };
 
 static const struct intel_device_info intel_broadwell_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 0100,
 	.prefer_y_tiling = 1,
 };
 
 static const struct intel_device_info intel_cherryview_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING,
 	.gen = 0101,
 	.prefer_y_tiling = 1,
 	.force_crocus_driver = 1,
 };
 
 static const struct intel_device_info intel_skylake_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING | INTEL_DRM_MODIFIER_Y_TILING,
 	.gen = 0110,
 	.prefer_y_tiling = 1,
 };
 
 static const struct intel_device_info intel_broxton_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING | INTEL_DRM_MODIFIER_Y_TILING,
 	.gen = 0111,
 	.prefer_y_tiling = 1,
 };
 
 static const struct intel_device_info intel_kabylake_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING | INTEL_DRM_MODIFIER_Y_TILING,
 	.gen = 0112,
 	.prefer_y_tiling = 1,
 };
 
 static const struct intel_device_info intel_geminilake_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING | INTEL_DRM_MODIFIER_Y_TILING,
 	.gen = 0113,
 	.prefer_y_tiling = 1,
 };
 
 static const struct intel_device_info intel_coffeelake_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING | INTEL_DRM_MODIFIER_Y_TILING,
 	.gen = 0114,
 	.prefer_y_tiling = 1,
 };
 
 static const struct intel_device_info intel_cannonlake_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING | INTEL_DRM_MODIFIER_Y_TILING,
 	.gen = 0120,
 	.force_ega = 1
 };
 
 static const struct intel_device_info intel_icelake_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING | INTEL_DRM_MODIFIER_Y_TILING,
 	.gen = 0130,
 	.force_ega = 1
 };
 
 static const struct intel_device_info intel_elkhartlake_info = {
+	.async_formats = INTEL_DRM_MODIFIER_X_TILING | INTEL_DRM_MODIFIER_Y_TILING,
 	.gen = 0131,
 	.force_ega = 1
 };
 
 static const struct intel_device_info intel_tigerlake_info = {
+	.async_formats = INTEL_DRM_MODIFIER_LINEAR | INTEL_DRM_MODIFIER_X_TILING | INTEL_DRM_MODIFIER_Y_TILING,
 	.gen = 0140,
 	.force_ega = 1
 };

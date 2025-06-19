@@ -130,8 +130,16 @@ struct xf86_platform_device;
 #define PCI_CHIP_HASWELL_CRW_E_GT2	0x0D1E
 #define PCI_CHIP_HASWELL_CRW_E_GT3	0x0D2E
 
+#define INTEL_DRM_MODIFIERS_UNSUPPORTED	(1 << 0)
+#define INTEL_DRM_MODIFIER_LINEAR		(1 << 1)
+#define INTEL_DRM_MODIFIER_X_TILING		(1 << 2)
+#define INTEL_DRM_MODIFIER_Y_TILING		(1 << 3)
+
 struct intel_device_info
 {
+	/* Supported modifiers for asynchronous page-flipping */
+	uint32_t async_formats;
+
 	/* 0-255 is more than enough. */
 	uint8_t gen;
 

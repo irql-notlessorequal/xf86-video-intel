@@ -6808,8 +6808,6 @@ discard_cow:
 			}
 
 			int flags = small_copy(region);
-			if (src_pixmap->usage_hint == SNA_PIXMAP_USAGE_DRI3_IMPORT)
-				flags |= COPY_AVOID_BLT;
 
 			if (!sna->render.copy_boxes(sna, alu,
 						    &src_pixmap->drawable, src_priv->gpu_bo, src_dx, src_dy,

@@ -647,11 +647,6 @@ static Bool sna_present_check_flip2(RRCrtcPtr crtc, WindowPtr window, PixmapPtr 
 		return FALSE;
 	}
 
-	if (!sync_flip && pixmap->usage_hint == SNA_PIXMAP_USAGE_DRI3_IMPORT) {
-		DBG(("%s: flip invalid for modifier\n", __FUNCTION__));
-		return FALSE;
-	}
-
 	flip = sna_pixmap(pixmap);
 	if (flip == NULL) {
 		DBG(("%s: unattached pixmap\n", __FUNCTION__));
@@ -665,7 +660,8 @@ static Bool sna_present_check_flip2(RRCrtcPtr crtc, WindowPtr window, PixmapPtr 
 
 	if (flip->pinned) {
 		assert(flip->gpu_bo);
-		if (sna->flags & SNA_LINEAR_FB) {
+
+		if (unlikely(sna->flags & SNA_LINEAR_FB)) {
 			if (flip->gpu_bo->tiling != I915_TILING_NONE) {
 				DBG(("%s: pinned bo, tiling=%d needs NONE\n",
 				     __FUNCTION__, flip->gpu_bo->tiling));
@@ -673,6 +669,17 @@ static Bool sna_present_check_flip2(RRCrtcPtr crtc, WindowPtr window, PixmapPtr 
 				return FALSE;
 			}
 		} else {
+			/**
+			 * Be bold and unconditionally treat unsupported modifiers
+			 * as illegal no matter if we're synchronous or asynchronous.
+			 * 
+			 * Hopefully this'll help with accidental modifier switching.
+			 */
+			if (!(sna->info->async_formats & convert_to_global_modifier(flip->gpu_bo->tiling))) {
+				DBG(("%s: Unsupported modifier for scanout\n", __FUNCTION__));
+				return FALSE;			
+			}
+
 			if (!sna->kgem.can_scanout_y &&
 			    flip->gpu_bo->tiling == I915_TILING_Y) {
 				DBG(("%s: pinned bo, tiling=%d and can't scanout Y\n",
