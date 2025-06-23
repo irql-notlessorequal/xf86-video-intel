@@ -368,21 +368,6 @@ will assign xrandr outputs HDMI1 and DP2 and CRTCs 0 and 2 to this instance of t
 .RE
 .TP
 
-.BI "Option \*qEnableYTilingScanout\*q \*q" boolean \*q
-This option tells SNA to enable Y-tiling for scanout.
-.br
-Highly experimental! 
-.B Works only on Skylake and newer.
-
-.br
-Known to break on NVIDIA Optimus/PRIME setups.
-
-.IP
-Default: Disabled.
-.br
-SNA only.
-.TP
-
 .SH OUTPUT CONFIGURATION
 On 830M and better chipsets, the driver supports runtime configuration of
 detected outputs.  You can use the
