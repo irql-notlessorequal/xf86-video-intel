@@ -60,6 +60,8 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <xf86drmMode.h>
 
+#include <drm_fourcc.h>
+
 #include "../compat-api.h"
 #include <drm.h>
 #include <i915_drm.h>
@@ -1549,6 +1551,24 @@ static inline char* tiling_to_str(char buf[24], int tiling)
 	}
 
 	return buf;
+}
+
+static inline unsigned long intel_tiling_to_drm(const int modifier)
+{
+	switch (modifier)
+	{
+		case I915_TILING_NONE:
+			return DRM_FORMAT_MOD_LINEAR;
+
+		case I915_TILING_X:
+			return I915_FORMAT_MOD_X_TILED;
+
+		case I915_TILING_Y:
+			return I915_FORMAT_MOD_Y_TILED;
+
+		default:
+			return DRM_FORMAT_MOD_INVALID;
+	}
 }
 
 #endif /* _SNA_H */

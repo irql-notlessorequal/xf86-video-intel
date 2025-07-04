@@ -30,17 +30,18 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <xf86drm.h>
 
 #include "sna.h"
 
 #include <xf86.h>
+#include <xf86drm.h>
 #include <dri3.h>
 #include <misyncshm.h>
 #include <misyncstr.h>
 
 static DevPrivateKeyRec sna_sync_fence_private_key;
-struct sna_sync_fence {
+struct sna_sync_fence
+{
 	SyncFenceSetTriggeredFunc set_triggered;
 };
 
@@ -306,6 +307,41 @@ free_bo:
 	return NULL;
 }
 
+static PixmapPtr sna_dri3_pixmap_from_fds(
+	ScreenPtr pScreen,
+	CARD8 num_fds,
+	const int *fds,
+	CARD16 width,
+	CARD16 height,
+	const CARD32 *strides,
+	const CARD32 *offsets,
+	CARD8 depth,
+	CARD8 bpp,
+	CARD64 modifier)
+{
+	if (num_fds != 1)
+		return NULL;
+
+	if (*offsets != 0)
+		return NULL;
+
+	switch (modifier)
+	{
+		/**
+		 * Allowed modifiers.
+		 */
+		case DRM_FORMAT_MOD_LINEAR:
+		case I915_FORMAT_MOD_X_TILED:
+		case I915_FORMAT_MOD_Y_TILED:
+			break;
+
+		default:
+			return NULL;
+	}
+	
+	return sna_dri3_pixmap_from_fd(pScreen, *fds, width, height, (CARD16) *strides, depth, bpp);
+}
+
 static int sna_dri3_fd_from_pixmap(ScreenPtr screen,
 				   PixmapPtr pixmap,
 				   CARD16 *stride,
@@ -377,6 +413,124 @@ static int sna_dri3_fd_from_pixmap(ScreenPtr screen,
 	return fd;
 }
 
+static int sna_dri3_fds_from_pixmap(
+	ScreenPtr screen,
+	PixmapPtr pixmap,
+	int *fds,
+	CARD32 *strides,
+	CARD32 *offsets,
+	CARD64 *modifier)
+{
+	struct sna *sna = to_sna_from_screen(screen);
+	struct sna_pixmap *priv;
+	struct kgem_bo *bo = NULL;
+	int fd;
+
+	DBG(("%s(pixmap=%ld, width=%d, height=%d)\n", __FUNCTION__,
+	     pixmap->drawable.serialNumber, pixmap->drawable.width, pixmap->drawable.height));
+	if (pixmap == sna->front && sna->flags & SNA_TEAR_FREE) {
+		DBG(("%s: DRI3 protocol cannot support TearFree frontbuffers\n", __FUNCTION__));
+		return -1;
+	}
+
+	priv = sna_pixmap(pixmap);
+	if (priv && IS_STATIC_PTR(priv->ptr) && priv->cpu_bo) {
+		if (sna_pixmap_move_to_cpu(pixmap, MOVE_READ | MOVE_WRITE | MOVE_ASYNC_HINT))
+			bo = priv->cpu_bo;
+	} else {
+		priv = sna_pixmap_move_to_gpu(pixmap, MOVE_READ | MOVE_WRITE | MOVE_ASYNC_HINT | __MOVE_FORCE | __MOVE_DRI);
+		if (priv != NULL) {
+			sna_damage_all(&priv->gpu_damage, pixmap);
+			bo = priv->gpu_bo;
+		}
+	}
+	if (bo == NULL) {
+		DBG(("%s: pixmap not supported by GPU\n", __FUNCTION__));
+		return -1;
+	}
+	assert(priv != NULL);
+
+	if (bo->pitch > UINT16_MAX) {
+		DBG(("%s: pixmap pitch (%d) too large for DRI3 protocol\n",
+		     __FUNCTION__, bo->pitch));
+		return -1;
+	}
+
+	if (bo->tiling && !sna->kgem.can_fence) {
+		if (!sna_pixmap_change_tiling(pixmap, I915_TILING_NONE)) {
+			DBG(("%s: unable to discard GPU tiling (%d) for DRI3 protocol\n",
+			     __FUNCTION__, bo->tiling));
+			return -1;
+		}
+		bo = priv->gpu_bo;
+	}
+
+	fd = kgem_bo_export_to_prime(&sna->kgem, bo);
+	if (fd == -1) {
+		DBG(("%s: exporting handle=%d to fd failed\n", __FUNCTION__, bo->handle));
+		return -1;
+	}
+
+	if (bo == priv->gpu_bo)
+		priv->pinned |= PIN_DRI3;
+	list_move(&priv->cow_list, &sna->dri3.pixmaps);
+
+	mark_dri3_pixmap(sna, priv, bo);
+
+	fds[0] = fd;
+	offsets[0] = 0;
+	strides[0] = (priv->pinned & PIN_DRI3) ? priv->gpu_bo->pitch : priv->cpu_bo->pitch;
+	*modifier = intel_tiling_to_drm(bo->tiling);
+
+	return TRUE;
+}
+
+Bool
+sna_dri3_get_formats(ScreenPtr screen,
+                   CARD32 *num_formats,
+				   CARD32 **formats)
+{
+	/*
+	 * Unsupported.
+	 */
+
+	*num_formats = 0;
+	return TRUE;
+}
+
+static int
+sna_dri3_get_modifiers(
+					ScreenPtr screen,
+					uint32_t format,
+					uint32_t *num_modifiers,
+					uint64_t **modifiers)
+{
+	/*
+	 * TODO(irql): Add support for Y-tiling scanout.
+	 */
+
+	*num_modifiers = 2;
+	*modifiers[0] = I915_FORMAT_MOD_X_TILED;
+	*modifiers[1] = DRM_FORMAT_MOD_LINEAR;
+
+	return TRUE;
+}
+
+static int
+sna_dri3_get_drawable_modifiers(
+					DrawablePtr drawable,
+					uint32_t format,
+					uint32_t *num_modifiers,
+					uint64_t **modifiers)
+{
+	/*
+	 * Unsupported.
+	 */
+
+	*num_modifiers = 0;
+	return TRUE;
+}
+
 static dri3_screen_info_rec sna_dri3_info = {
 	.version = DRI3_SCREEN_INFO_VERSION,
 
@@ -387,7 +541,16 @@ static dri3_screen_info_rec sna_dri3_info = {
 	.fd_from_pixmap = sna_dri3_fd_from_pixmap,
 
 	/* version one */
+
 	.open_client = sna_dri3_open_client,
+
+	/* version two */
+
+	.pixmap_from_fds = sna_dri3_pixmap_from_fds,
+	.fds_from_pixmap = sna_dri3_fds_from_pixmap,
+	.get_formats = sna_dri3_get_formats,
+	.get_modifiers = sna_dri3_get_modifiers,
+	.get_drawable_modifiers = sna_dri3_get_drawable_modifiers
 };
 
 bool sna_dri3_open(struct sna *sna, ScreenPtr screen)
