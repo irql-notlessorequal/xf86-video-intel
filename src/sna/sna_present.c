@@ -38,27 +38,30 @@
 
 static present_screen_info_rec present_info;
 
+typedef void (*sna_drm_handler_proc)(uint64_t frame,
+                                    uint64_t usec,
+                                    void *data);
+
+typedef void (*sna_drm_abort_proc)(void *data);
+
 struct sna_present_event
 {
-	xf86CrtcPtr crtc;
-	struct sna *sna;
-	struct list link;
-	uint64_t *event_id;
-	uint64_t target_msc;
-	int n_event_id;
-	bool queued;
-	bool active;
+	uint64_t		event_id;
+
+	Bool			unflip;
+	Bool			is_fake;
 };
 
-static void sna_present_unflip(ScreenPtr screen, uint64_t event_id);
-static bool sna_present_queue(struct sna_present_event *info,
-			      uint64_t last_msc);
-
-static inline struct sna_present_event *
-to_present_event(uintptr_t  data)
+static Bool
+sna_present_event_match(void *data, void *match_data)
 {
-	return (struct sna_present_event *)(data & ~3);
+    struct sna_present_event *event = data;
+    uint64_t *match = match_data;
+
+    return *match == event->event_id;
 }
+
+static void sna_present_unflip(ScreenPtr screen, uint64_t event_id);
 
 static struct sna_present_event *info_alloc(struct sna *sna)
 {
@@ -71,16 +74,6 @@ static struct sna_present_event *info_alloc(struct sna *sna)
 	}
 
 	return malloc(sizeof(struct sna_present_event) + sizeof(uint64_t));
-}
-
-static void info_free(struct sna_present_event *info)
-{
-	struct sna *sna = info->sna;
-
-	if (sna->present.freed_info)
-		free(sna->present.freed_info);
-
-	sna->present.freed_info = info;
 }
 
 static inline bool msc_before(uint64_t msc, uint64_t target)
@@ -129,237 +122,6 @@ static inline int sna_wait_vblank(struct sna *sna, union drm_wait_vblank *vbl, i
 	return drmIoctl(sna->kgem.fd, DRM_IOCTL_WAIT_VBLANK, vbl);
 }
 
-static uint64_t gettime_ust64(void)
-{
-	struct timespec tv;
-
-	/**
-	 * modesetting uses coarse timing to reduce overhead, do that here too.
-	 */
-
-#ifdef __linux__
-	if (clock_gettime(CLOCK_MONOTONIC_COARSE, &tv))
-#elif __FreeBSD__
-	if (clock_gettime(CLOCK_MONOTONIC_FAST, &tv))
-#else
-	if (clock_gettime(CLOCK_MONOTONIC, &tv))
-#endif
-		return GetTimeInMicros();
-
-	return ust64(tv.tv_sec, tv.tv_nsec / 1000);
-}
-
-static void vblank_complete(struct sna_present_event *info,
-			    uint64_t ust, uint64_t msc)
-{
-	struct list * const q = sna_crtc_vblank_queue(info->crtc);
-	int n;
-
-	do {
-		assert(sna_crtc_vblank_queue(info->crtc) == q);
-
-		if (msc_before(msc, info->target_msc)) {
-			DBG(("%s: event=%d too early, now %lld, expected %lld\n",
-			     __FUNCTION__,
-			     info->event_id[0],
-			     (long long)msc, (long long)info->target_msc));
-			if (sna_present_queue(info, msc))
-				return;
-		}
-
-		DBG(("%s: %d events complete\n", __FUNCTION__, info->n_event_id));
-		for (n = 0; n < info->n_event_id; n++) {
-			DBG(("%s: crtc=%d tv=%d.%06d msc=%lld (target=%lld), event=%lld complete%s\n", __FUNCTION__,
-			     sna_crtc_index(info->crtc),
-			     (int)(ust / 1000000), (int)(ust % 1000000),
-			     (long long)msc, (long long)info->target_msc,
-			     (long long)info->event_id[n],
-			     info->target_msc && msc == (uint32_t)info->target_msc ? "" : ": MISS"));
-			present_event_notify(info->event_id[n], ust, msc);
-		}
-		if (info->n_event_id > 1)
-			free(info->event_id);
-
-		_list_del(&info->link);
-		info_free(info);
-
-		info = list_entry(info->link.next, typeof(*info), link);
-	} while (q != &info->link && !info->queued);
-}
-
-static uint32_t msc_to_delay(xf86CrtcPtr crtc, uint64_t target)
-{
-	const DisplayModeRec *mode = &crtc->desiredMode;
-	const struct ust_msc *swap = sna_crtc_last_swap(crtc);
-	int64_t delay, subframe;
-
-	assert(mode->Clock);
-
-	delay = target - swap->msc;
-	assert(delay >= 0);
-	if (delay > 1) { /* try to use the hw vblank for the last frame */
-		delay--;
-		subframe = 0;
-	} else {
-		subframe = gettime_ust64() - swap_ust(swap);
-		subframe += 500;
-		subframe /= 1000;
-	}
-	delay *= mode->VTotal * mode->HTotal / mode->Clock;
-	if (subframe < delay)
-		delay -= subframe;
-	else
-		delay = 0;
-
-	DBG(("%s: sleep %d frames, %llu ms\n", __FUNCTION__,
-	     (int)(target - swap->msc), (long long)delay));
-	assert(delay >= 0);
-	return MIN(delay, INT32_MAX);
-}
-
-static void add_to_crtc_vblank(struct sna_present_event *info,
-				int delta)
-{
-	info->active = true;
-	if (delta == 1 && info->crtc) {
-		sna_crtc_set_vblank(info->crtc);
-		info->crtc = mark_crtc(info->crtc);
-	}
-}
-
-static CARD32 sna_fake_vblank_handler(OsTimerPtr timer, CARD32 now, void *data)
-{
-	struct sna_present_event *info = data;
-	union drm_wait_vblank vbl;
-	uint64_t msc, ust;
-
-	DBG(("%s(event=%lldx%d, now=%d)\n", __FUNCTION__, (long long)info->event_id[0], info->n_event_id, now));
-	assert(info->queued);
-
-	VG_CLEAR(vbl);
-	vbl.request.type = (uint32_t)DRM_VBLANK_RELATIVE;
-	vbl.request.sequence = 0;
-	if (sna_wait_vblank(info->sna, &vbl, sna_crtc_index(info->crtc)) == 0) {
-		ust = ust64(vbl.reply.tval_sec, vbl.reply.tval_usec);
-		msc = sna_crtc_record_vblank(info->crtc, &vbl);
-		DBG(("%s: event=%lld, target msc=%lld, now %lld\n",
-		     __FUNCTION__, (long long)info->event_id[0], (long long)info->target_msc, (long long)msc));
-		if (msc_before(msc, info->target_msc)) {
-			int delta = info->target_msc - msc;
-			uint32_t delay;
-
-			DBG(("%s: too early, requeuing delta=%d\n", __FUNCTION__, delta));
-			assert(info->target_msc - msc < 1ull<<31);
-			if (delta <= 2) {
-				vbl.request.type = DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT;
-				vbl.request.sequence = info->target_msc;
-				vbl.request.signal = (uintptr_t)MARK_PRESENT(info);
-				if (sna_wait_vblank(info->sna, &vbl, sna_crtc_index(info->crtc)) == 0) {
-					DBG(("%s: scheduled new vblank event for %lld\n", __FUNCTION__, (long long)info->target_msc));
-					add_to_crtc_vblank(info, delta);
-					free(timer);
-					return 0;
-				}
-			}
-
-			delay = msc_to_delay(info->crtc, info->target_msc);
-			if (delay) {
-				DBG(("%s: requeueing timer for %dms delay\n", __FUNCTION__, delay));
-				return delay;
-			}
-
-			/* As a last resort use a blocking wait.
-			 * Less than a millisecond for (hopefully) a rare case.
-			 */
-			DBG(("%s: blocking wait!\n", __FUNCTION__));
-			vbl.request.type = (uint32_t)DRM_VBLANK_ABSOLUTE;
-			vbl.request.sequence = info->target_msc;
-			if (sna_wait_vblank(info->sna, &vbl, sna_crtc_index(info->crtc)) == 0) {
-				ust = ust64(vbl.reply.tval_sec, vbl.reply.tval_usec);
-				msc = sna_crtc_record_vblank(info->crtc, &vbl);
-			} else {
-				DBG(("%s: blocking wait failed, fudging\n",
-				     __FUNCTION__));
-				goto fixup;
-			}
-		}
-	} else {
-fixup:
-		ust = gettime_ust64();
-		msc = info->target_msc;
-		DBG(("%s: event=%lld, CRTC OFF, target msc=%lld, was %lld (off)\n",
-		     __FUNCTION__, (long long)info->event_id[0], (long long)info->target_msc, (long long)sna_crtc_last_swap(info->crtc)->msc));
-	}
-
-	vblank_complete(info, ust, msc);
-	free(timer);
-	return 0;
-}
-
-static bool sna_fake_vblank(struct sna_present_event *info)
-{
-	const struct ust_msc *swap = sna_crtc_last_swap(info->crtc);
-	uint32_t delay;
-
-	if (msc_before(swap->msc, info->target_msc))
-		delay = msc_to_delay(info->crtc, info->target_msc);
-	else
-		delay = 0;
-
-	DBG(("%s(event=%lldx%d, target_msc=%lld, msc=%lld, delay=%ums)\n",
-	     __FUNCTION__, (long long)info->event_id[0], info->n_event_id,
-	     (long long)info->target_msc, (long long)swap->msc, delay));
-	if (delay == 0) {
-		uint64_t ust, msc;
-
-		if (msc_before(swap->msc, info->target_msc)) {
-			/* Fixup and pretend it completed immediately */
-			msc = info->target_msc;
-			ust = gettime_ust64();
-		} else {
-			msc = swap->msc;
-			ust = swap_ust(swap);
-		}
-
-		vblank_complete(info, ust, msc);
-		return true;
-	}
-
-	return TimerSet(NULL, 0, delay, sna_fake_vblank_handler, info);
-}
-
-static bool sna_present_queue(struct sna_present_event *info,
-			      uint64_t last_msc)
-{
-	union drm_wait_vblank vbl;
-	int delta = info->target_msc - last_msc;
-
-	DBG(("%s: target msc=%llu, seq=%u (last_msc=%llu), delta=%d\n",
-	     __FUNCTION__,
-	     (long long)info->target_msc,
-	     (unsigned)info->target_msc,
-	     (long long)last_msc,
-	     delta));
-	assert(info->target_msc - last_msc < 1ull<<31);
-	assert(delta >= 0);
-
-	VG_CLEAR(vbl);
-	vbl.request.type = DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT;
-	vbl.request.sequence = info->target_msc;
-	vbl.request.signal = (uintptr_t)MARK_PRESENT(info);
-	if (delta > 2 ||
-	    sna_wait_vblank(info->sna, &vbl, sna_crtc_index(info->crtc))) {
-		DBG(("%s: vblank enqueue failed, faking delta=%d\n", __FUNCTION__, delta));
-		if (!sna_fake_vblank(info))
-			return false;
-	} else {
-		add_to_crtc_vblank(info, delta);
-	}
-
-	info->queued = true;
-	return true;
-}
-
 static RRCrtcPtr
 sna_present_get_crtc(WindowPtr window)
 {
@@ -384,49 +146,6 @@ sna_present_get_crtc(WindowPtr window)
 		return crtc->randr_crtc;
 
 	return NULL;
-}
-
-static void add_keepalive(struct sna *sna, xf86CrtcPtr crtc, uint64_t msc)
-{
-	struct list *q = sna_crtc_vblank_queue(crtc);
-	struct sna_present_event *info, *tmp;
-	union drm_wait_vblank vbl;
-
-	list_for_each_entry(tmp, q, link) {
-		if (tmp->target_msc == msc) {
-			DBG(("%s: vblank already queued for target_msc=%lld\n",
-			     __FUNCTION__, (long long)msc));
-			return;
-		}
-
-		if ((int64_t)(tmp->target_msc - msc) > 0)
-			break;
-	}
-
-	DBG(("%s: adding keepalive for target_msc=%lld\n",
-	     __FUNCTION__, (long long)msc));
-
-	info = info_alloc(sna);
-	if (!info)
-		return;
-
-	info->crtc = crtc;
-	info->sna = sna;
-	info->target_msc = msc;
-	info->event_id = (uint64_t *)(info + 1);
-	info->n_event_id = 0;
-
-	VG_CLEAR(vbl);
-	vbl.request.type = DRM_VBLANK_ABSOLUTE | DRM_VBLANK_EVENT;
-	vbl.request.sequence = msc;
-	vbl.request.signal = (uintptr_t)MARK_PRESENT(info);
-
-	if (sna_wait_vblank(info->sna, &vbl, sna_crtc_index(crtc)) == 0) {
-		list_add_tail(&info->link, &tmp->link);
-		add_to_crtc_vblank(info, 1);
-		info->queued = true;
-	} else
-		info_free(info);
 }
 
 static int
@@ -466,109 +185,65 @@ last:
 	return Success;
 }
 
-void
-sna_present_vblank_handler(struct drm_event_vblank *event)
+static void
+sna_present_vblank_handler(uint64_t msc, uint64_t usec, void *data)
 {
-	struct sna_present_event *info = to_present_event(event->user_data);
-	uint64_t msc;
+	struct sna_present_event *info = data;
 
-	if (!info->active) {
-		DBG(("%s: arrived unexpectedly early (not active)\n", __FUNCTION__));
-		assert(!has_vblank(info->crtc));
-		return;
-	}
+	present_event_notify(info->event_id, usec, msc);
+}
 
-	if (has_vblank(info->crtc)) {
-		DBG(("%s: clearing immediate flag\n", __FUNCTION__));
-		info->crtc = unmask_crtc(info->crtc);
-		sna_crtc_clear_vblank(info->crtc);
-	}
+static void
+sna_present_vblank_abort(void *data)
+{
+	struct sna_present_event *info = data;
 
-	msc = sna_crtc_record_event(info->crtc, event);
+	free(info);
+}
 
-	vblank_complete(info, ust64(event->tv_sec, event->tv_usec), msc);
+static uint32_t
+sna_drm_queue_alloc(xf86CrtcPtr crtc,
+                   void *data,
+                   sna_drm_handler_proc handler,
+                   sna_drm_abort_proc abort)
+{
+	struct list *q = sna_crtc_vblank_queue(crtc);
 }
 
 static int
 sna_present_queue_vblank(RRCrtcPtr crtc, uint64_t event_id, uint64_t msc)
 {
+	xf86CrtcPtr xf86_crtc = crtc->devPrivate;
 	struct sna *sna = to_sna_from_screen(crtc->pScreen);
-	struct sna_present_event *info, *tmp;
-	const struct ust_msc *swap;
-	struct list *q;
+	struct sna_present_event *event;
+	uint32_t seq;
 
 	if (!sna_crtc_is_on(crtc->devPrivate))
 		return BadAlloc;
 
-	swap = sna_crtc_last_swap(crtc->devPrivate);
-	DBG(("%s(crtc=%d, event=%lld, msc=%lld, last swap=%lld)\n",
-	     __FUNCTION__, sna_crtc_index(crtc->devPrivate),
-	     (long long)event_id, (long long)msc, (long long)swap->msc));
+	event = calloc(1, sizeof(struct sna_present_event));
+	if (!event)
+		return BadAlloc;
 
-	if (warn_unless((int64_t)(msc - swap->msc) >= 0)) {
-		DBG(("%s: crtc=%d tv=%d.%06d msc=%lld (target=%lld), event=%lld complete\n", __FUNCTION__,
-		     sna_crtc_index(crtc->devPrivate),
-		     swap->tv_sec, swap->tv_usec,
-		     (long long)swap->msc, (long long)msc,
-		     (long long)event_id));
-		present_event_notify(event_id, swap_ust(swap), swap->msc);
+	event->event_id = event_id;
+
+	seq = sna_drm_queue_alloc(xf86_crtc, event,
+							 sna_present_vblank_handler,
+							 sna_present_vblank_abort);
+	if (!seq)
+	{
+		free(event);
+		return BadAlloc;
+	}
+
+	if (!sna_queue_vblank(xf86_crtc, DRM_VBLANK_ABSOLUTE, msc, NULL, seq))
+	{
+		return BadAlloc;
+	}
+	else
+	{
 		return Success;
 	}
-	if (warn_unless(msc - swap->msc < 1ull<<31))
-		return BadValue;
-
-	q = sna_crtc_vblank_queue(crtc->devPrivate);
-	list_for_each_entry(tmp, q, link) {
-		if (tmp->target_msc == msc) {
-			uint64_t *events = tmp->event_id;
-
-			if (tmp->n_event_id &&
-			    is_power_of_two(tmp->n_event_id)) {
-				events = malloc(2*sizeof(uint64_t)*tmp->n_event_id);
-				if (events == NULL)
-					return BadAlloc;
-
-				memcpy(events,
-				       tmp->event_id,
-				       tmp->n_event_id*sizeof(uint64_t));
-				if (tmp->n_event_id != 1)
-					free(tmp->event_id);
-				tmp->event_id = events;
-			}
-
-			DBG(("%s: appending event=%lld to vblank %lld x %d\n",
-			     __FUNCTION__, (long long)event_id, (long long)msc, tmp->n_event_id+1));
-			events[tmp->n_event_id++] = event_id;
-			return Success;
-		}
-		if ((int64_t)(tmp->target_msc - msc) > 0) {
-			DBG(("%s: previous target_msc=%lld invalid for coalescing\n",
-			     __FUNCTION__, (long long)tmp->target_msc));
-			break;
-		}
-	}
-
-	info = info_alloc(sna);
-	if (info == NULL)
-		return BadAlloc;
-
-	info->crtc = crtc->devPrivate;
-	info->sna = sna;
-	info->target_msc = msc;
-	info->event_id = (uint64_t *)(info + 1);
-	info->event_id[0] = event_id;
-	info->n_event_id = 1;
-	list_add_tail(&info->link, &tmp->link);
-	info->queued = false;
-	info->active = false;
-
-	if (info->link.prev == q && !sna_present_queue(info, swap->msc)) {
-		list_del(&info->link);
-		info_free(info);
-		return BadAlloc;
-	}
-
-	return Success;
 }
 
 static void
@@ -582,6 +257,10 @@ sna_present_abort_vblank(RRCrtcPtr crtc, uint64_t event_id, uint64_t msc)
 static void
 sna_present_flush(WindowPtr window)
 {
+	ScreenPtr screen = window->drawable.pScreen;
+	struct sna *sna = to_sna_from_screen(screen);
+
+	sna_accel_flush(sna);
 }
 
 static bool
@@ -693,47 +372,12 @@ static Bool sna_present_check_flip2(RRCrtcPtr crtc, WindowPtr window, PixmapPtr 
 }
 
 static void
-present_flip_handler(struct drm_event_vblank *event, void *data)
+sna_present_flip_handler(struct sna *sna, uint64_t msc,
+                        uint64_t ust, void *data)
 {
-	struct sna_present_event *info = data;
-	struct ust_msc swap;
+    struct sna_present_event *event = data;
 
-	DBG(("%s(sequence=%d): event=%lld\n", __FUNCTION__, event->sequence, (long long)info->event_id[0]));
-	assert(info->n_event_id == 1);
-	if (!info->active) {
-		DBG(("%s: arrived unexpectedly early (not active)\n", __FUNCTION__));
-		return;
-	}
-
-	if (info->crtc == NULL) {
-		swap.tv_sec = event->tv_sec;
-		swap.tv_usec = event->tv_usec;
-		swap.msc = event->sequence;
-	} else {
-		info->crtc = unmask_crtc(info->crtc);
-		swap = *sna_crtc_last_swap(info->crtc);
-	}
-
-	DBG(("%s: crtc=%d, tv=%d.%06d msc=%lld (target %lld), event=%lld complete%s\n", __FUNCTION__,
-	     info->crtc ? sna_crtc_index(info->crtc) : -1,
-	     swap.tv_sec, swap.tv_usec, (long long)swap.msc,
-	     (long long)info->target_msc,
-	     (long long)info->event_id[0],
-	     info->target_msc && info->target_msc == swap.msc ? "" : ": MISS"));
-	present_event_notify(info->event_id[0], swap_ust(&swap), swap.msc);
-	if (info->crtc) {
-		sna_crtc_clear_vblank(info->crtc);
-		if (!sna_crtc_has_vblank(info->crtc))
-			add_keepalive(info->sna, info->crtc, swap.msc + 1);
-	}
-
-	if (info->sna->present.unflip) {
-		DBG(("%s: executing queued unflip (event=%lld)\n", __FUNCTION__, (long long)info->sna->present.unflip));
-		sna_present_unflip(xf86ScrnToScreen(info->sna->scrn),
-				   info->sna->present.unflip);
-		info->sna->present.unflip = 0;
-	}
-	info_free(info);
+	sna_present_vblank_handler(msc, ust, event);
 }
 
 static Bool
@@ -756,15 +400,11 @@ do_flip(struct sna *sna,
 	if (info == NULL)
 		return FALSE;
 
-	info->crtc = crtc ? crtc->devPrivate : NULL;
-	info->sna = sna;
-	info->event_id = (uint64_t *)(info + 1);
-	info->event_id[0] = event_id;
-	info->n_event_id = 1;
-	info->target_msc = target_msc;
-	info->active = false;
+	info->event_id = event_id;
+	info->is_fake = FALSE;
+	info->unflip = FALSE;
 
-	if (!sna_page_flip(sna, bo, async, present_flip_handler, info)) {
+	if (!sna_page_flip(sna, bo, async, sna_present_flip_handler, info)) {
 		DBG(("%s: pageflip failed\n", __FUNCTION__));
 		info_free(info);
 		return FALSE;
