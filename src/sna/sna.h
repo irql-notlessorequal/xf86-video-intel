@@ -343,8 +343,6 @@ struct sna {
 		bool shadow_enabled;
 		bool shadow_dirty;
 		bool dirty;
-		/* Only used in gen7_render.c */
-		bool has_mitigations_active;
 
 		struct drm_event_vblank *shadow_events;
 		int shadow_nevent;
