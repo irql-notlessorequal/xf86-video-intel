@@ -344,7 +344,7 @@ typedef struct intel_screen_private
 #define IS_965_Q(pI810) (intel_get_device_id((intel)->dev) == PCI_CHIP_I965_Q)
 
 /* supports Y tiled surfaces (pre-965 Mesa isn't ready yet) */
-#define SUPPORTS_YTILING(pI810) (INTEL_INFO(intel)->gen >= 040)
+#define SUPPORTS_Y_TILING(pI810) (INTEL_INFO(intel)->gen >= 040)
 #define SUPPORTS_Y_SCANOUT(pI810) (INTEL_INFO(intel)->gen >= 0110)
 #define HAS_BLT(pI810) (INTEL_INFO(intel)->gen >= 060)
 
