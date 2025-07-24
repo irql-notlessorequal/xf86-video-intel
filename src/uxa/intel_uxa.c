@@ -1352,6 +1352,7 @@ Bool intel_uxa_init(ScreenPtr screen)
 
 	/* Composite */
 	if (intel_option_accel_blt(intel)) {
+		xf86DrvMsg(scrn->scrnIndex, X_INFO, "User requested BLITTER acceleration only\n");
 	} else if (INTEL_INFO(intel)->gen < 030) {
 		intel->uxa_driver->check_composite = i830_check_composite;
 		intel->uxa_driver->check_composite_target = i830_check_composite_target;
@@ -1390,6 +1391,9 @@ Bool intel_uxa_init(ScreenPtr screen)
 		} else {
 			intel->context_switch = gen6_context_switch;
 		}
+	} else {
+		xf86DrvMsg(scrn->scrnIndex, X_WARNING,
+			       "Unsupported hardware, using BLITTER acceleration only.\n");
 	}
 
 	/* PutImage */

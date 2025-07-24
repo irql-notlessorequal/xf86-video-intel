@@ -61,14 +61,4 @@ There are no plans to address this, a solution is to use the `modesetting` drive
 
 ### Missing symbols (i.e. `vbeFree`)
 
-This is a known issue and will eventually be addressed.
-
-In the meantime a workaround is to add the following to your Xorg config:
-
-```
-Section "Module"
-Load "vgahw"
-Load "vbe"
-Load "shadowfb"
-EndSection
-```
+Fixed in `master` branch as of July 2025.

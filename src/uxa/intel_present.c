@@ -54,7 +54,8 @@
 
 #include "present.h"
 
-struct intel_present_vblank_event {
+struct intel_present_vblank_event
+{
 	uint64_t        event_id;
 };
 
@@ -135,6 +136,7 @@ intel_present_vblank_handler(ScrnInfoPtr scrn, xf86CrtcPtr crtc, uint64_t msc, u
 	struct intel_present_vblank_event       *event = data;
 
 	present_event_notify(event->event_id, usec, msc);
+
 	free(event);
 }
 
@@ -169,8 +171,10 @@ intel_present_queue_vblank(RRCrtcPtr                    crtc,
 	uint32_t                                seq;
 
 	event = calloc(1, sizeof(struct intel_present_vblank_event));
+	
 	if (!event)
 		return BadAlloc;
+	
 	event->event_id = event_id;
 	seq = intel_drm_queue_alloc(scrn, xf86_crtc, event,
 				    intel_present_vblank_handler,
@@ -243,7 +247,7 @@ intel_present_check_flip(RRCrtcPtr              crtc,
 	ScreenPtr               screen = window->drawable.pScreen;
 	ScrnInfoPtr             scrn = xf86ScreenToScrn(screen);
 	intel_screen_private    *intel = intel_get_screen_private(scrn);
-        dri_bo                  *bo;
+    dri_bo                  *bo;
 	uint32_t		tiling, swizzle;
 
 	if (!scrn->vtSema)
@@ -258,22 +262,37 @@ intel_present_check_flip(RRCrtcPtr              crtc,
 	if (crtc && !intel_crtc_on(crtc->devPrivate))
 		return FALSE;
 
-        /* Check stride, can't change that on flip */
-        if (pixmap->devKind != intel->front_pitch)
-                return FALSE;
+    /* Check stride, can't change that on flip */
+    if (pixmap->devKind != intel->front_pitch)
+        return FALSE;
 
-        /* Make sure there's a bo we can get to */
-        bo = intel_get_pixmap_bo(pixmap);
-        if (!bo)
-                return FALSE;
+    /* Make sure there's a bo we can get to */
+    bo = intel_get_pixmap_bo(pixmap);
+    if (!bo)
+    	return FALSE;
 
 	if (drm_intel_bo_get_tiling(bo, &tiling, &swizzle))
 		return FALSE;
 
-	if (tiling == I915_TILING_Y)
-		return FALSE;
+	/**
+	 * Previously we would block I915_TILING_Y but
+	 * most drivers are mature enough to _not_ use
+	 * that for scanout.
+	 * 
+	 * Furthermore, pull in the fix from SNA
+	 * so that we don't try to async flip a linear modifier.
+	 */
+	switch (tiling)
+	{
+		case I915_TILING_Y:
+			return SUPPORTS_Y_SCANOUT(intel);
 
-	return TRUE;
+		case I915_TILING_NONE:
+			return sync_flip;
+
+		default:
+			return TRUE;
+	}
 }
 
 /*

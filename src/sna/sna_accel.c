@@ -1812,10 +1812,7 @@ static bool sna_pixmap_alloc_gpu(struct sna *sna,
 				 struct sna_pixmap *priv,
 				 unsigned flags)
 {
-	/* "However, prior to Sky Lake, Y-tiling was not available for scanout so X tiling was
-	 *  used for any sort of window-system buffers. Starting with Sky Lake, we can scan out from Y-tiled buffers."
-	 */
-	uint32_t scanout_tile = prefer_y_tiling_scanout(sna) ? I915_TILING_Y : I915_TILING_X;
+	uint32_t scanout_tile = I915_TILING_X;
 	uint32_t tiling;
 
 	/* Use tiling by default, but disable per user request */
@@ -18424,9 +18421,6 @@ bool sna_accel_init(ScreenPtr screen, struct sna *sna)
 	if (!sna_picture_init(screen))
 		return false;
 
-	/* Kernel enables mitigations for affected generations by default. */
-	sna->mode.has_mitigations_active = true;
-
 	backend = no_render_init(sna);
 	if (sna_option_accel_none(sna)) {
 		backend = "disabled";
@@ -18469,11 +18463,6 @@ bool sna_accel_init(ScreenPtr screen, struct sna *sna)
 	xf86DrvMsg(sna->scrn->scrnIndex, X_INFO,
 		   "SNA initialized with %s backend\n",
 		   backend);
-
-	/* Tell Ivy Bridge/Baytrail/Haswell users if the old BLT logic was re-enabled */
-	if (sna->kgem.gen >= 070 && sna->kgem.gen < 0100) {
-		xf86DrvMsg(sna->scrn->scrnIndex, X_INFO, "SNA: Full BLT mode: %s\n", (sna->mode.has_mitigations_active ? "DISABLED" : "ENABLED"));
-	}
 
 	return true;
 }
