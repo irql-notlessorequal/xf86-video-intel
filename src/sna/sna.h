@@ -1500,23 +1500,6 @@ static inline bool prefer_y_color_tiling(struct sna *sna)
 	return should_prefer_y_color_tiling;
 }
 
-static inline bool prefer_y_tiling_scanout(struct sna *sna)
-{
-	static int should_prefer_y_scanout = -1;
-
-	if (should_prefer_y_scanout == -1)
-	{
-		/* Pre-Skylake cannot scanout Y-tiles. */
-		if (sna->info->gen < 0110 || !sna->info->prefer_y_tiling) {
-			should_prefer_y_scanout = 0;
-		} else {
-			should_prefer_y_scanout = xf86ReturnOptValBool(sna->Options, OPTION_ENABLE_Y_SCANOUT, FALSE);
-		}
-	}
-
-	return should_prefer_y_scanout;
-}
-
 static inline char* tiling_to_str(char buf[24], int tiling)
 {
 	switch (tiling)

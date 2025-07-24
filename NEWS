@@ -42,12 +42,6 @@ struct optimization and tweaks.
 
  * Use the fastest clocksource available per platform in SNA and UXA.
 
- * Add an option to directly scanout Y-tiling.
-
-   This option:
-   - Only works on Skylake and equivalent.
-   - Will break horribly with multiple GPUs/PRIME.
-
  * Update the internal driver code to adapt for future Xorg changes
 
  * Improved per architecture optimization in SNA.
