@@ -177,6 +177,7 @@ static PixmapPtr sna_dri3_pixmap_from_fd(ScreenPtr screen,
 	PixmapPtr pixmap;
 	struct sna_pixmap *priv;
 	struct kgem_bo *bo;
+	int flags = 0;
 
 	DBG(("%s(fd=%d, width=%d, height=%d, stride=%d, depth=%d, bpp=%d)\n",
 	     __FUNCTION__, fd, width, height, stride, depth, bpp));
@@ -248,7 +249,13 @@ static PixmapPtr sna_dri3_pixmap_from_fd(ScreenPtr screen,
 		goto free_bo;
 	}
 
-	pixmap = sna_pixmap_create_unattached(screen, 0, 0, depth);
+	/**
+	 * If it's linear, likely it's from an external source.
+	 */
+	if (bo->tiling == I915_TILING_NONE)
+		flags = SNA_PIXMAP_USAGE_DRI3_IMPORT;	
+
+	pixmap = sna_pixmap_create_unattached_with_hint(screen, width, height, depth, flags);
 	if (pixmap == NullPixmap)
 		goto free_bo;
 

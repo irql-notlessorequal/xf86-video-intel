@@ -1038,6 +1038,15 @@ sna_pixmap_create_unattached(ScreenPtr screen,
 			     -1);
 }
 
+PixmapPtr
+sna_pixmap_create_unattached_with_hint(ScreenPtr screen,
+	int width, int height, int depth, unsigned int hint)
+{
+	return create_pixmap(to_sna_from_screen(screen),
+			     screen, width, height, depth,
+			     hint);
+}
+
 static PixmapPtr
 sna_pixmap_create_scratch(ScreenPtr screen,
 			  int width, int height, int depth,
