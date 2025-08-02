@@ -429,7 +429,9 @@ struct sna {
 	OptionInfoPtr Options;
 
 	/* Driver phase/state information */
-	bool suspended;
+	Bool suspended;
+	/* Gen7 full blitter mode */
+	Bool mitigations_active;
 
 #if HAVE_UDEV
 	struct udev_monitor *uevent_monitor;

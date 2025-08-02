@@ -61,6 +61,7 @@ sna_sources = [
   'gen5_render.c',
   'gen6_common.c',
   'gen6_render.c',
+  'gen7_render_mitigations.c',
   'gen7_render.c',
   'gen8_eu.c',
   'gen8_render.c',
