@@ -1038,6 +1038,15 @@ sna_pixmap_create_unattached(ScreenPtr screen,
 			     -1);
 }
 
+PixmapPtr
+sna_pixmap_create_unattached_with_hint(ScreenPtr screen,
+	int width, int height, int depth, unsigned int hint)
+{
+	return create_pixmap(to_sna_from_screen(screen),
+			     screen, width, height, depth,
+			     hint);
+}
+
 static PixmapPtr
 sna_pixmap_create_scratch(ScreenPtr screen,
 			  int width, int height, int depth,
@@ -5248,7 +5257,15 @@ sna_put_zpixmap_blt(DrawablePtr drawable, GCPtr gc, RegionPtr region,
 	/* Region is pre-clipped and translated into pixmap space */
 	box = region_rects(region);
 	n = region_num_rects(region);
+
+	if (!n)
+	{
+		DBG(("%s: Refusing to upload a NULL amount of regions!\n", __FUNCTION__));
+		return false;
+	}
+
 	DBG(("%s: upload(%d, %d, %d, %d) x %d boxes\n", __FUNCTION__, x, y, w, h, n));
+
 	do {
 		DBG(("%s: copy box (%d, %d)->(%d, %d)x(%d, %d)\n",
 		     __FUNCTION__,
@@ -9175,7 +9192,9 @@ sna_poly_zero_line_blt(DrawablePtr drawable,
 	struct sna *sna = to_sna_from_pixmap(pixmap);
 	int x2, y2, xstart, ystart, oc2;
 	unsigned int bias = miGetZeroLineBias(drawable->pScreen);
+#if 0
 	bool degenerate = true;
+#endif
 	struct sna_fill_op fill;
 	RegionRec clip;
 	BoxRec box[512], *b, * const last_box = box + ARRAY_SIZE(box);
@@ -9244,7 +9263,9 @@ sna_poly_zero_line_blt(DrawablePtr drawable,
 			if (x2 == x1 && y2 == y1)
 				continue;
 
+#if 0
 			degenerate = false;
+#endif
 
 			oc2 = 0;
 			OUTCODES(oc2, x2, y2, extents);
@@ -17643,6 +17664,9 @@ static bool sna_scanout_do_flush(struct sna *sna)
 
 static bool sna_accel_do_throttle(struct sna *sna)
 {
+	if (sna->flags & SNA_NO_THROTTLE)
+		return false;
+
 	if (sna->timer_active & (1<<(THROTTLE_TIMER))) {
 		int32_t delta = sna->timer_expire[THROTTLE_TIMER] - TIME;
 		if (delta <= 3) {
@@ -18424,9 +18448,11 @@ restart:
 	       sna->timer_active & (1<<(FLUSH_TIMER)));
 
 	if (sna_accel_do_throttle(sna))
+	{
+		assert(!sna->kgem.need_retire ||
+			sna->timer_active & (1<<(THROTTLE_TIMER)));
 		sna_accel_throttle(sna);
-	assert(!sna->kgem.need_retire ||
-	       sna->timer_active & (1<<(THROTTLE_TIMER)));
+	}
 
 	if (sna_accel_do_expire(sna))
 		sna_accel_expire(sna);

@@ -136,6 +136,10 @@ int intel_get_master(struct intel_device *dev);
 int intel_put_master(struct intel_device *dev);
 void intel_put_device(struct intel_device *dev);
 
+int __get_render_node_count();
+int __get_correct_render_node(struct intel_device *dev);
+int __requires_drm_workaround(struct intel_device *dev);
+
 void intel_detect_chipset(ScrnInfoPtr scrn, struct intel_device *dev);
 
 #define IS_DEFAULT_ACCEL_METHOD(x) ({ \

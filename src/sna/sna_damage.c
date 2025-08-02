@@ -48,10 +48,11 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * cheapy discard no-ops.
  */
 
-struct sna_damage_box {
+struct sna_damage_box
+{
 	struct list list;
-	int size;
-} __attribute__((packed));
+	unsigned int size;
+};
 
 static struct sna_damage *__freed_damage;
 
