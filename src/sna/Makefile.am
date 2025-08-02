@@ -99,6 +99,8 @@ libsna_la_SOURCES = \
 	gen6_common.h \
 	gen6_render.c \
 	gen6_render.h \
+	gen7_render_mitigations.h \
+	gen7_render_mitigations.c \
 	gen7_render.c \
 	gen7_render.h \
 	gen8_eu.c \
