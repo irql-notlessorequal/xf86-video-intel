@@ -96,6 +96,11 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define TEST_KGEM (TEST_ALL || 0)
 #define TEST_RENDER (TEST_ALL || 0)
 
+/**
+ * Used for the async-flipping workaround.
+ */
+#define SNA_PIXMAP_USAGE_DRI3_IMPORT 128
+
 #include "intel_driver.h"
 #include "intel_list.h"
 #include "kgem.h"
@@ -789,6 +794,10 @@ PixmapPtr sna_pixmap_create_upload(ScreenPtr screen,
 				   unsigned flags);
 PixmapPtr sna_pixmap_create_unattached(ScreenPtr screen,
 				       int width, int height, int depth);
+
+PixmapPtr sna_pixmap_create_unattached_with_hint(ScreenPtr screen,
+			int width, int height, int depth, unsigned int usage);
+
 void sna_pixmap_destroy(PixmapPtr pixmap);
 
 #define assert_pixmap_map(pixmap, priv)  do { \

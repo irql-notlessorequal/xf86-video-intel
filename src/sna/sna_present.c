@@ -637,6 +637,11 @@ sna_present_check_flip(RRCrtcPtr crtc,
 		return FALSE;
 	}
 
+	if (!sync_flip && pixmap->usage_hint == SNA_PIXMAP_USAGE_DRI3_IMPORT) {
+		DBG(("%s: flip invalid for modifier\n", __FUNCTION__));
+		return FALSE;
+	}
+
 	flip = sna_pixmap(pixmap);
 	if (flip == NULL) {
 		DBG(("%s: unattached pixmap\n", __FUNCTION__));
