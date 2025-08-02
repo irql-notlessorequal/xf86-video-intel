@@ -1263,7 +1263,13 @@ static uint64_t gettime_us(void)
 {
 	struct timespec tv;
 
+#if defined(CLOCK_MONOTONIC_FAST)
+	if (clock_gettime(CLOCK_MONOTONIC_FAST, &tv))
+#elif defined(CLOCK_MONOTONIC_COARSE)
+	if (clock_gettime(CLOCK_MONOTONIC_COARSE, &tv))
+#else
 	if (clock_gettime(CLOCK_MONOTONIC, &tv))
+#endif
 		return 0;
 
 	return (uint64_t)tv.tv_sec * 1000000 + tv.tv_nsec / 1000;
@@ -1289,7 +1295,7 @@ fail:
 		return TRUE;
 	}
 
-        ret = intel_get_crtc_msc_ust(scrn, crtc, msc, ust);
+    ret = intel_get_crtc_msc_ust(scrn, crtc, msc, ust);
 	if (ret) {
 		static int limit = 5;
 		if (limit) {
