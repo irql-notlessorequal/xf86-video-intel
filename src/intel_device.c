@@ -896,6 +896,7 @@ static char *intel_str_replace(char *orig, char *rep, char *with)
 
 	if (!with)
 		with = "";
+		
 	len_with = strlen(with);
 
 	ins = orig;
