@@ -258,22 +258,37 @@ intel_present_check_flip(RRCrtcPtr              crtc,
 	if (crtc && !intel_crtc_on(crtc->devPrivate))
 		return FALSE;
 
-        /* Check stride, can't change that on flip */
-        if (pixmap->devKind != intel->front_pitch)
-                return FALSE;
+    /* Check stride, can't change that on flip */
+    if (pixmap->devKind != intel->front_pitch)
+        return FALSE;
 
-        /* Make sure there's a bo we can get to */
-        bo = intel_get_pixmap_bo(pixmap);
-        if (!bo)
-                return FALSE;
+    /* Make sure there's a bo we can get to */
+    bo = intel_get_pixmap_bo(pixmap);
+    if (!bo)
+        return FALSE;
 
 	if (drm_intel_bo_get_tiling(bo, &tiling, &swizzle))
 		return FALSE;
 
-	if (tiling == I915_TILING_Y)
-		return FALSE;
+	/**
+	 * Previously we would block I915_TILING_Y but
+	 * most drivers are mature enough to _not_ use
+	 * that for scanout.
+	 * 
+	 * Furthermore, pull in the fix from SNA
+	 * so that we don't try to async flip a linear modifier.
+	 */
+	switch (tiling)
+	{
+		case I915_TILING_Y:
+			return SUPPORTS_Y_SCANOUT(intel);
 
-	return TRUE;
+		case I915_TILING_NONE:
+			return sync_flip;
+
+		default:
+			return TRUE;
+	}
 }
 
 /*
