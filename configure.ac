@@ -352,15 +352,15 @@ AC_ARG_ENABLE(kms,
               [KMS="yes"])
 AC_ARG_ENABLE(ums,
 	      AS_HELP_STRING([--enable-ums],
-			     [Assume UMS support [[default=auto]]]),
+			     [Assume UMS support [[default=no]]]),
               [UMS="$enableval"],
-              [UMS="auto"])
+              [UMS="no"])
 
 AC_ARG_ENABLE(kms-only,
 	      AS_HELP_STRING([--enable-kms-only],
-			     [Only assume KMS support (no UMS) [[default=no]]]),
+			     [Only assume KMS support (no UMS) [[default=yes]]]),
               [ONLY_KMS="$enableval"],
-              [ONLY_KMS="no"])
+              [ONLY_KMS="yes"])
 
 AC_ARG_ENABLE(ums-only,
 	      AS_HELP_STRING([--enable-ums-only],
