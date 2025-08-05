@@ -1537,6 +1537,14 @@ static const char *options_get_dri(intel_screen_private *intel)
 #endif
 }
 
+#if !defined(USE_LEGACY_DRIVERS)
+static inline bool is_modern_device(intel_screen_private *intel)
+{
+	/* Cherryview is not supported by the modern Iris driver. */
+	return INTEL_INFO(intel)->gen > 075 && INTEL_INFO(intel)->gen != 0101;
+}
+#endif
+
 static const char *dri_driver_name(intel_screen_private *intel)
 {
 	const char *s = options_get_dri(intel);
@@ -1547,7 +1555,11 @@ static const char *dri_driver_name(intel_screen_private *intel)
 		else if (INTEL_INFO(intel)->gen < 040)
 			return "i915";
 		else
+#if defined(USE_LEGACY_DRIVERS)
 			return "i965";
+#else
+			return is_modern_device(intel) ? "iris" : "crocus";
+#endif
 	}
 
 	return s;
