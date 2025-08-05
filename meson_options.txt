@@ -4,8 +4,8 @@ option('uxa', type : 'boolean', value : true,
        description : 'Build with UXA support')
 option('xaa', type : 'boolean', value : true,
        description : 'Build with XAA support')
-option('ums', type : 'boolean', value : true,
-       description : 'Build with UMS support')
+option('ums', type : 'boolean', value : false,
+       description : 'Build with UMS support (disabled by default)')
 option('kms', type : 'boolean', value : true,
        description : 'Build with KMS support')
 option('dri1', type : 'boolean', value : true,
