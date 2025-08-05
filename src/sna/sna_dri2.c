@@ -3700,6 +3700,14 @@ static const char *options_get_dri(struct sna *sna)
 #endif
 }
 
+#if !defined(USE_LEGACY_DRIVERS)
+static inline bool is_modern_device(struct sna *sna)
+{
+	/* Cherryview is not supported by the modern Iris driver. */
+	return sna->kgem.gen > 075 && sna->kgem.gen != 0101;
+}
+#endif
+
 static const char *dri_driver_name(struct sna *sna)
 {
 	const char *s = options_get_dri(sna);
@@ -3710,7 +3718,11 @@ static const char *dri_driver_name(struct sna *sna)
 		else if (sna->kgem.gen < 040)
 			return "i915";
 		else
-			return "i965";
+#if defined(USE_LEGACY_DRIVERS)
+		return "i965";
+#else
+		return is_modern_device(sna) ? "iris" : "crocus";
+#endif
 	}
 
 	return s;
