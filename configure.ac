@@ -368,6 +368,12 @@ AC_ARG_ENABLE(ums-only,
               [ONLY_UMS="$enableval"],
               [ONLY_UMS="no"])
 
+AC_ARG_ENABLE(amber-support,
+	      AS_HELP_STRING([--enable-amber-support],
+			     [Use legacy Mesa Amber i965 driver [[default=no]]]),
+              [MESA_AMBER="$enableval"],
+              [MESA_AMBER="no"])
+
 required_xorg_server_version=1.6
 required_pixman_version=0.16
 
@@ -484,6 +490,10 @@ fi
 AM_CONDITIONAL(UMS, test "x$UMS" = "xyes")
 if test "x$UMS" = "xyes"; then
 	AC_DEFINE(UMS,1,[Assume UMS support])
+fi
+
+if test "x$MESA_AMBER" = "xyes"; then
+	AC_DEFINE(USE_LEGACY_DRIVERS, 1, [Use i965 driver from Amber branch for GLX])
 fi
 
 have_dri1=no
