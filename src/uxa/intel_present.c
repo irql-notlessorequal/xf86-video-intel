@@ -347,7 +347,8 @@ intel_present_flip(RRCrtcPtr                    crtc,
 
 	event->event_id = event_id;
 
-	ret = intel_do_pageflip(intel, bo, index, !sync_flip,
+	ret = intel_do_pageflip(intel, bo, index, target_msc,
+				!sync_flip,
 				event,
 				intel_present_flip_event,
 				intel_present_flip_abort);
@@ -382,9 +383,10 @@ intel_present_unflip(ScreenPtr screen, uint64_t event_id)
 
 	event->event_id = event_id;
 
-	if (!intel_do_pageflip(intel, bo, -1, FALSE, event,
-			       intel_present_flip_event,
-			       intel_present_flip_abort))
+	if (!intel_do_pageflip(intel, bo, -1, 0, FALSE,
+				   event,
+				   intel_present_flip_event,
+				   intel_present_flip_abort))
 		goto fail;
 
 	return;

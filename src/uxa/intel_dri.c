@@ -883,7 +883,8 @@ can_exchange(DrawablePtr drawable, DRI2BufferPtr front, DRI2BufferPtr back)
 static Bool
 queue_flip(struct intel_screen_private *intel,
 	   DrawablePtr draw,
-	   DRI2FrameEventPtr info)
+	   DRI2FrameEventPtr info,
+	   CARD64 target_msc)
 {
 	xf86CrtcPtr crtc = I830DRI2DrawableCrtc(draw);
 	I830DRI2BufferPrivatePtr priv = info->back->driverPrivate;
@@ -897,7 +898,7 @@ queue_flip(struct intel_screen_private *intel,
 
 	if (!intel_do_pageflip(intel, old_back,
 			       intel_crtc_to_index(crtc),
-			       FALSE, info,
+			       target_msc, FALSE, info,
 			       I830DRI2FlipComplete, I830DRI2FlipAbort))
 		return FALSE;
 
@@ -980,7 +981,7 @@ static void I830DRI2FrameEventHandler(unsigned int frame,
 	switch (swap_info->type) {
 	case DRI2_FLIP:
 		/* If we can still flip... */
-		if (!queue_flip(intel, drawable, swap_info) &&
+		if (!queue_flip(intel, drawable, swap_info, swap_info->frame) &&
 		    !queue_swap(intel, drawable, swap_info)) {
 		case DRI2_SWAP:
 			I830DRI2FallbackBlitSwap(drawable,
@@ -1140,7 +1141,7 @@ I830DRI2ScheduleSwap(ClientPtr client, DrawablePtr draw, DRI2BufferPtr front,
 	 */
 	if (divisor == 0 &&
 	    current_msc >= *target_msc &&
-	    queue_flip(intel, draw, swap_info))
+	    queue_flip(intel, draw, swap_info, *target_msc))
 		return TRUE;
 
 	if (can_exchange(draw, front, back)) {

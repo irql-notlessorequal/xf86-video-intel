@@ -431,6 +431,7 @@ typedef struct _DRI2FrameEvent {
 extern Bool intel_do_pageflip(intel_screen_private *intel,
 			      dri_bo *new_front,
 			      int ref_crtc_hw_id,
+				  uint32_t target_msc,
 			      Bool async,
 			      void *pageflip_data,
 			      intel_pageflip_handler_proc pageflip_handler,

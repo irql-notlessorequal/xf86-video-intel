@@ -1701,6 +1701,7 @@ Bool
 intel_do_pageflip(intel_screen_private *intel,
 		  dri_bo *new_front,
 		  int ref_crtc_hw_id,
+		  uint32_t target_msc,
 		  Bool async,
 		  void *pageflip_data,
 		  intel_pageflip_handler_proc pageflip_handler,
@@ -1782,14 +1783,46 @@ intel_do_pageflip(intel_screen_private *intel,
 
 		mode->flip_count++;
 
+#if defined(DRM_MODE_PAGE_FLIP_TARGET_ABSOLUTE) && defined(DRM_MODE_PAGE_FLIP_TARGET_RELATIVE)
+		if (intel_crtc_to_index(crtc->crtc) == ref_crtc_hw_id)
+		{
+			flags |= DRM_MODE_PAGE_FLIP_TARGET_ABSOLUTE;
+
+			if (drmModePageFlipTarget(mode->fd,
+						crtc_id(crtc),
+						new_fb_id,
+						flags, (void *)(uintptr_t)seq,
+						target_msc)) {
+				err = errno;
+				intel_drm_abort_seq(scrn, seq);
+				goto error_undo;
+			}
+		}
+		else
+		{
+			flags |= DRM_MODE_PAGE_FLIP_TARGET_RELATIVE;
+
+			if (drmModePageFlipTarget(mode->fd,
+						crtc_id(crtc),
+						new_fb_id,
+						flags,
+						(void *)(uintptr_t)seq, 0)) {
+				err = errno;
+				intel_drm_abort_seq(scrn, seq);
+				goto error_undo;
+			}
+		}
+#else
 		if (drmModePageFlip(mode->fd,
-				    crtc_id(crtc),
-				    new_fb_id,
-				    flags, (void *)(uintptr_t)seq)) {
+					crtc_id(crtc),
+					new_fb_id,
+					flags,
+					(void *)(uintptr_t)seq)) {
 			err = errno;
 			intel_drm_abort_seq(scrn, seq);
 			goto error_undo;
 		}
+#endif
 	}
 
 	mode->old_fb_id = mode->fb_id;
