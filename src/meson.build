@@ -129,6 +129,11 @@ else
   config.set('DEFAULT_ACCEL_METHOD', 'NOACCEL')
 endif
 
+mesa_amber_support = get_option('mesa-amber')
+if mesa_amber_support
+  config.set10('USE_LEGACY_DRIVERS', true)
+endif
+
 if with_valgrind
   intel_drv_deps += valgrind
 endif
