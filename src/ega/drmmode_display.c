@@ -3516,7 +3516,7 @@ drmmode_pre_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, int cpp)
     drmmode_clones_init(pScrn, drmmode, mode_res);
 
     drmModeFreeResources(mode_res);
-    xf86ProviderSetup(pScrn, NULL, "modesetting");
+    xf86ProviderSetup(pScrn, NULL, "ega");
 
     xf86InitialConfiguration(pScrn, TRUE);
 

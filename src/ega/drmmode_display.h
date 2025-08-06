@@ -36,6 +36,13 @@
 
 #include "dumb_bo.h"
 
+#include <X11/Xdefs.h>
+#include <privates.h>
+#include <xf86Opt.h>
+#include <xf86drm.h>
+#include <xf86str.h>
+#include <xf86Crtc.h>
+
 struct gbm_device;
 
 enum drmmode_plane_property {

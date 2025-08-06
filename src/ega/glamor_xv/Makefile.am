@@ -22,7 +22,7 @@
 module_LTLIBRARIES = libglamoregl.la
 
 libglamoregl_la_SOURCES = \
-	$(top_srcdir)/glamor/glamor_egl.c \
+	$(srcdir)/../glamor/glamor_egl.c \
 	glamor_xf86_xv.c \
 	$()
 
@@ -32,12 +32,13 @@ libglamoregl_la_LDFLAGS = \
 	$()
 
 libglamoregl_la_LIBADD = \
-	$(top_builddir)/glamor/libglamor.la \
+	$(srcdir)/../glamor/libglamor.la \
 	$()
 
 AM_CPPFLAGS = $(XORG_INCS) \
-	-I$(top_srcdir)/dri3 \
-	-I$(top_srcdir)/glamor \
+	-I$(srcdir)/../glamor \
 	$()
 
-AM_CFLAGS = $(DIX_CFLAGS) $(XORG_CFLAGS) $(GLAMOR_CFLAGS) $(GBM_CFLAGS)
+AM_CFLAGS = $(DIX_CFLAGS) $(XORG_CFLAGS) $(DRM_CFLAGS) $(DRMINTEL_CFLAGS) $(GLAMOR_CFLAGS) $(GBM_CFLAGS) \
+			-DWITH_LIBDRM=1 -DGLAMOR_HAS_EGL_QUERY_DMABUF=1 -DGLAMOR_HAS_EGL_QUERY_DRIVER=1 -DGLXEXT=1 -DGLAMOR=1 \
+			-DGLAMOR_HAS_GBM=1 -DGLAMOR_HAS_GBM_LINEAR=1 -DGBM_BO_WITH_MODIFIERS=1

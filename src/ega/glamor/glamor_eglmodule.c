@@ -27,7 +27,7 @@
  *    Zhigang Gong <zhigang.gong@gmail.com>
  */
 
-#include "dix-config.h"
+#include <xorg-server.h>
 
 #include <xf86.h>
 #define GLAMOR_FOR_XORG

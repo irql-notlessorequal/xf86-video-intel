@@ -425,6 +425,9 @@ if test "x$UXA" != "xno"; then
 	UXA=yes
 fi
 
+ega_requires_libdrm=2.4.109
+ega_requires_libgbm=17.1
+
 AC_ARG_ENABLE(ega,
           AS_HELP_STRING([--enable-ega],
                  [Enable Everything Graphically Accelerated (EGA) [default=no]]),
@@ -433,8 +436,11 @@ AC_ARG_ENABLE(ega,
  
 if test "x$EGA" != "xno"; then
     AC_DEFINE(USE_EGA, 1, [Enable EGA support])
+	PKG_CHECK_MODULES(DRMINTEL, [libdrm_intel >= $ega_requires_libdrm])
+	PKG_CHECK_MODULES(EPOXY, [epoxy])
+	PKG_CHECK_MODULES(GBM, [gbm >= $ega_requires_libgbm])
     required_pixman_version=0.24
-    RGA=yes
+    EGA=yes
 fi
 
 PKG_CHECK_MODULES(XORG, [xorg-server >= $required_xorg_server_version xproto fontsproto damageproto pixman-1 >= $required_pixman_version $REQUIRED_MODULES])

@@ -20,7 +20,7 @@
  * OF THIS SOFTWARE.
  */
 
-#include <dix-config.h>
+#include <xorg-server.h>
 
 #include <stddef.h>
 #include <X11/fonts/fontstruct.h> // libxfont2.h missed to include that

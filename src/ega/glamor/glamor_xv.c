@@ -32,7 +32,7 @@
  * Xv acceleration implementation
  */
 
-#include <dix-config.h>
+#include <xorg-server.h>
 
 #include "glamor_priv.h"
 #include "glamor_transform.h"

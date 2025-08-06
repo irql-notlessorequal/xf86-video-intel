@@ -1,8 +1,11 @@
 noinst_LTLIBRARIES = libglamor.la libglamor_egl_stubs.la
 
-libglamor_la_LIBADD = $(GLAMOR_LIBS)
+libglamor_la_LIBADD = $(GLAMOR_LIBS) $(GBM_LIBS)
 
-AM_CFLAGS = $(CWARNFLAGS) $(DIX_CFLAGS) $(GLAMOR_CFLAGS)
+AM_CFLAGS = $(DIX_CFLAGS) $(XORG_CFLAGS) $(DRM_CFLAGS) $(DRMINTEL_CFLAGS) $(EPOXY_CFLAGS) $(UDEV_CFLAGS) $(CWARNFLAGS) -DWITH_LIBDRM=1 \
+            -DGLAMOR_HAS_EGL_QUERY_DMABUF=1 -DGLAMOR_HAS_EGL_QUERY_DRIVER=1 \
+			-DGLXEXT=1 -DGLAMOR=1 -DGLAMOR_HAS_GBM=1 -DGLAMOR_HAS_GBM_LINEAR=1 \
+			-DGBM_BO_WITH_MODIFIERS=1
 
 libglamor_la_SOURCES = \
 	glamor.c \
@@ -13,7 +16,8 @@ libglamor_la_SOURCES = \
 	glamor_debug.h \
 	glamor_font.c \
 	glamor_font.h \
-	glamor_glx.c \
+	glamor_egl.c \
+	glamor_egl.h \
 	glamor_composite_glyphs.c \
 	glamor_image.c \
 	glamor_lines.c \
@@ -55,6 +59,5 @@ libglamor_la_SOURCES += \
 endif
 
 libglamor_egl_stubs_la_SOURCES = \
-	glamor_egl_stubs.c \
 	glamor_egl_ext.h \
 	glamor_egl.h
