@@ -40,9 +40,6 @@
 #include <X11/extensions/randr.h>
 #include <X11/extensions/Xv.h>
 
-#include "config/hotplug_priv.h"
-#include "dix/dix_priv.h"
-
 #include "xf86.h"
 #include "xf86Priv.h"
 #include "xf86_OSproc.h"
@@ -58,7 +55,6 @@
 #include "miscstruct.h"
 #include "dixstruct.h"
 #include "xf86xv.h"
-#include <xorg-config.h>
 #ifdef XSERVER_PLATFORM_BUS
 #include "xf86platformBus.h"
 #endif

@@ -22,13 +22,7 @@ AM_CFLAGS = $(DIX_CFLAGS) $(XORG_CFLAGS) $(LIBDRM_CFLAGS) $(UDEV_CFLAGS) $(CWARN
 
 AM_CPPFLAGS = \
 	$(XORG_INCS) \
-	-I$(top_srcdir)/glamor \
-	-I$(srcdir)/../../ddc \
-	-I$(srcdir)/../../dri2 \
-	-I$(srcdir)/../../i2c \
-	-I$(srcdir)/../../modes \
-	-I$(srcdir)/../../parser \
-	-I$(srcdir)/../../ramdac \
+	-I$(srcdir)/glamor \
 	$(NULL)
 
 noinst_LTLIBRARIES = libega.la
