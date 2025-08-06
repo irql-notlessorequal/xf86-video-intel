@@ -443,68 +443,10 @@ static void
 drmmode_ConvertToKMode(ScrnInfoPtr scrn,
                        drmModeModeInfo * kmode, DisplayModePtr mode);
 
-
-static int
-crtc_add_prop(drmModeAtomicReq *req, drmmode_crtc_private_ptr drmmode_crtc,
-              enum drmmode_crtc_property prop, uint64_t val)
-{
-    drmmode_prop_info_ptr info = &drmmode_crtc->props[prop];
-    int ret;
-
-    if (!info)
-        return -1;
-
-    ret = drmModeAtomicAddProperty(req, drmmode_crtc->mode_crtc->crtc_id,
-                                   info->prop_id, val);
-    return (ret <= 0) ? -1 : 0;
-}
-
-static int
-connector_add_prop(drmModeAtomicReq *req, drmmode_output_private_ptr drmmode_output,
-                   enum drmmode_connector_property prop, uint64_t val)
-{
-    drmmode_prop_info_ptr info = &drmmode_output->props_connector[prop];
-    int ret;
-
-    if (!info)
-        return -1;
-
-    ret = drmModeAtomicAddProperty(req, drmmode_output->output_id,
-                                   info->prop_id, val);
-    return (ret <= 0) ? -1 : 0;
-}
-
 static int
 drmmode_CompareKModes(const drmModeModeInfo * kmode, const drmModeModeInfo * other)
 {
     return memcmp(kmode, other, sizeof(*kmode));
-}
-
-static int
-drm_mode_ensure_blob(xf86CrtcPtr crtc, const drmModeModeInfo* mode_info)
-{
-    modesettingPtr ms = modesettingPTR(crtc->scrn);
-    drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
-    drmmode_mode_ptr mode;
-    int ret;
-
-    if (drmmode_crtc->current_mode &&
-        drmmode_CompareKModes(&drmmode_crtc->current_mode->mode_info, mode_info) == 0)
-        return 0;
-
-    mode = calloc(1, sizeof(drmmode_mode_rec));
-    if (!mode)
-        return -1;
-
-    mode->mode_info = *mode_info;
-    ret = drmModeCreatePropertyBlob(ms->fd,
-                                    &mode->mode_info,
-                                    sizeof(mode->mode_info),
-                                    &mode->blob_id);
-    drmmode_crtc->current_mode = mode;
-    xorg_list_add(&mode->entry, &drmmode_crtc->mode_list);
-
-    return ret;
 }
 
 static int

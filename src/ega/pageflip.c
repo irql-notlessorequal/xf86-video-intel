@@ -24,11 +24,10 @@
 
 #include <errno.h>
 
-#include "os/xserver_poll.h"
-
 #include <xf86drm.h>
 
 #include "driver.h"
+#include "ms_ugly_hack.h"
 
 /*
  * Flush the DRM event queue when full; makes space for new events.
