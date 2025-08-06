@@ -31,7 +31,7 @@ AM_CPPFLAGS = \
 	-I$(srcdir)/../../ramdac \
 	$(NULL)
 
-libega_la_LTLIBRARIES = libega.la
+noinst_LTLIBRARIES = libega.la
 libega_la_LIBADD = $(UDEV_LIBS) $(DRM_LIBS)
 libega_la_ladir = @moduledir@/drivers
 
