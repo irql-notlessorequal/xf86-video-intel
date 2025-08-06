@@ -1,0 +1,1 @@
+extern Bool ega_init_driver(ScrnInfoPtr scrn, int entity_num);

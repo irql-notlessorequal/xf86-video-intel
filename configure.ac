@@ -864,6 +864,8 @@ AC_CONFIG_FILES([
                 src/sna/fb/Makefile
                 src/uxa/Makefile
 				src/ega/Makefile
+				src/ega/glamor/Makefile
+				src/ega/glamor_xv/Makefile
                 xvmc/Makefile
                 xvmc/shader/Makefile
                 xvmc/shader/mc/Makefile

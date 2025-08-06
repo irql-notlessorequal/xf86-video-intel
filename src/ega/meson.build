@@ -1,4 +1,5 @@
 ega_sources = [
+    'ms_compat.c',
     'driver.c',
     'drmmode_display.c',
     'dumb_bo.c',
@@ -32,6 +33,7 @@ subdir('glamor_xv')
 
 ega = static_library('ega',
             [ git_version_h, ega_sources ],
+            link_with: [glamor, glamorxv],
             dependencies : [
 				libdrm_dep,
 				xserver_dep,

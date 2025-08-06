@@ -27,7 +27,7 @@
 #include <xf86drm.h>
 
 #include "driver.h"
-#include "ms_ugly_hack.h"
+#include "ms_compat.h"
 
 /*
  * Flush the DRM event queue when full; makes space for new events.
@@ -45,7 +45,7 @@ ms_flush_drm_events_timeout(ScreenPtr screen, int timeout)
     int r;
 
     do {
-            r = xserver_poll(&p, 1, timeout);
+        r = xserver_poll(&p, 1, timeout);
     } while (r == -1 && (errno == EINTR || errno == EAGAIN));
 
     /* If there was an error, r will be < 0.  Return that.  If there was

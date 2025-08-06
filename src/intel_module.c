@@ -43,6 +43,7 @@
 #include "legacy/legacy.h"
 #include "sna/sna_module.h"
 #include "uxa/uxa_module.h"
+#include "ega/ega_module.h"
 
 #include "i915_pciids.h" /* copied from (kernel) include/drm/i915_pciids.h */
 

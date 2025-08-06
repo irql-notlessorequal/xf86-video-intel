@@ -444,12 +444,6 @@ drmmode_ConvertToKMode(ScrnInfoPtr scrn,
                        drmModeModeInfo * kmode, DisplayModePtr mode);
 
 static int
-drmmode_CompareKModes(const drmModeModeInfo * kmode, const drmModeModeInfo * other)
-{
-    return memcmp(kmode, other, sizeof(*kmode));
-}
-
-static int
 drmmode_crtc_can_test_mode(xf86CrtcPtr crtc)
 {
     return FALSE;
@@ -538,7 +532,6 @@ drmmode_set_ctm(xf86CrtcPtr crtc, const struct drm_color_ctm *ctm)
 static int
 drmmode_crtc_set_mode(xf86CrtcPtr crtc, Bool test_only)
 {
-    modesettingPtr ms = modesettingPTR(crtc->scrn);
     xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(crtc->scrn);
     drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
     drmmode_ptr drmmode = drmmode_crtc->drmmode;
@@ -1109,7 +1102,6 @@ drmmode_ConvertToKMode(ScrnInfoPtr scrn,
 static void
 drmmode_crtc_dpms(xf86CrtcPtr crtc, int mode)
 {
-    modesettingPtr ms = modesettingPTR(crtc->scrn);
     drmmode_crtc_private_ptr drmmode_crtc = crtc->driver_private;
     drmmode_ptr drmmode = drmmode_crtc->drmmode;
 
@@ -2594,7 +2586,6 @@ drmmode_output_destroy(xf86OutputPtr output)
 static void
 drmmode_output_dpms(xf86OutputPtr output, int mode)
 {
-    modesettingPtr ms = modesettingPTR(output->scrn);
     drmmode_output_private_ptr drmmode_output = output->driver_private;
     drmmode_ptr drmmode = drmmode_output->drmmode;
     xf86CrtcPtr crtc = output->crtc;
@@ -3032,10 +3023,6 @@ drmmode_output_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, drmModeResPtr mode_r
     Bool nonDesktop = FALSE;
     drmModePropertyBlobPtr path_blob = NULL;
     const char *s;
-    drmModeObjectPropertiesPtr props;
-    static const drmmode_prop_info_rec connector_props[] = {
-        [DRMMODE_CONNECTOR_CRTC_ID] = { .name = "CRTC_ID", },
-    };
 
     koutput =
         drmModeGetConnector(drmmode->fd, mode_res->connectors[num]);

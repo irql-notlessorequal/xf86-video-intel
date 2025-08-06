@@ -40,7 +40,7 @@
 #include <X11/extensions/randr.h>
 #include <X11/extensions/Xv.h>
 
-#include "glamor_ugly_hack.h"
+#include "ms_compat.h"
 #include "xf86.h"
 #include "xf86Priv.h"
 #include "xf86_OSproc.h"
@@ -67,7 +67,6 @@
 static void AdjustFrame(ScrnInfoPtr pScrn, int x, int y);
 static Bool CloseScreen(ScreenPtr pScreen);
 static Bool EnterVT(ScrnInfoPtr pScrn);
-static void Identify(int flags);
 static const OptionInfoRec *AvailableOptions(int chipid, int busid);
 static ModeStatus ValidMode(ScrnInfoPtr pScrn, DisplayModePtr mode,
                             Bool verbose, int flags);
@@ -77,10 +76,6 @@ static Bool SwitchMode(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static Bool ScreenInit(ScreenPtr pScreen, int argc, char **argv);
 static Bool PreInit(ScrnInfoPtr pScrn, int flags);
 
-static Bool Probe(DriverPtr drv, int flags);
-static Bool ms_pci_probe(DriverPtr driver,
-                         int entity_num, struct pci_device *device,
-                         intptr_t match_data);
 static Bool ms_driver_func(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data);
 
 /* window wrapper functions used to get the notification when
@@ -105,35 +100,8 @@ static const struct pci_id_match ms_device_match[] = {
 struct xf86_platform_device;
 #endif
 
-#ifdef XSERVER_PLATFORM_BUS
-static Bool ms_platform_probe(DriverPtr driver,
-                              int entity_num, int flags,
-                              struct xf86_platform_device *device,
-                              intptr_t match_data);
-#endif
-
-_X_EXPORT DriverRec ega = {
-    1,
-    "ega",
-    Identify,
-    Probe,
-    AvailableOptions,
-    NULL,
-    0,
-    ms_driver_func,
-    ms_device_match,
-    ms_pci_probe,
-#ifdef XSERVER_PLATFORM_BUS
-    ms_platform_probe,
-#endif
-};
-
-static SymTabRec Chipsets[] = {
-    {0, "kms"},
-    {-1, NULL}
-};
-
-static const OptionInfoRec Options[] = {
+static const OptionInfoRec Options[] =
+{
     {OPTION_SW_CURSOR, "SWcursor", OPTV_BOOLEAN, {0}, FALSE},
     {OPTION_DEVICE_PATH, "kmsdev", OPTV_STRING, {0}, FALSE},
     {OPTION_SHADOW_FB, "ShadowFB", OPTV_BOOLEAN, {0}, FALSE},
@@ -149,58 +117,6 @@ static const OptionInfoRec Options[] = {
 };
 
 int ms_entity_index = -1;
-
-static MODULESETUPPROTO(Setup);
-
-static XF86ModuleVersionInfo VersRec = {
-    .modname      = "ega",
-    .vendor       = MODULEVENDORSTRING,
-    ._modinfo1_   = MODINFOSTRING1,
-    ._modinfo2_   = MODINFOSTRING2,
-    .xf86version  = XORG_VERSION_CURRENT,
-    .majorversion = XORG_VERSION_MAJOR,
-    .minorversion = XORG_VERSION_MINOR,
-    .patchlevel   = XORG_VERSION_PATCH,
-    .abiclass     = ABI_CLASS_VIDEODRV,
-    .abiversion   = ABI_VIDEODRV_VERSION,
-    .moduleclass  = MOD_CLASS_VIDEODRV,
-};
-
-_X_EXPORT XF86ModuleData egaModuleData = {
-    .vers = &VersRec,
-    .setup = Setup
-};
-
-static void *
-Setup(void *module, void *opts, int *errmaj, int *errmin)
-{
-    static Bool setupDone = 0;
-
-    /* This module should be loaded only once, but check to be sure.
-     */
-    if (!setupDone) {
-        setupDone = 1;
-        xf86AddDriver(&ega, module, HaveDriverFuncs);
-
-        /*
-         * The return value must be non-NULL on success even though there
-         * is no TearDownProc.
-         */
-        return (void *) 1;
-    }
-    else {
-        if (errmaj)
-            *errmaj = LDR_ONCEONLY;
-        return NULL;
-    }
-}
-
-static void
-Identify(int flags)
-{
-    xf86PrintChipsets("ega", "Modesetting Driver Modified for Intel Hardware",
-                      Chipsets);
-}
 
 modesettingEntPtr ms_ent_priv(ScrnInfoPtr scrn)
 {
@@ -276,7 +192,6 @@ probe_hw(const char *dev, struct xf86_platform_device *platform_dev)
 
 #ifdef XF86_PDEV_SERVER_FD
     if (platform_dev && (platform_dev->flags & XF86_PDEV_SERVER_FD)) {
-        struct OdevAttributes sd;
         fd = xf86_platform_device_odev_attributes(platform_dev)->fd;
         if (fd == -1)
             return FALSE;
@@ -360,12 +275,15 @@ ms_driver_func(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data)
     }
 }
 
-static void
-ms_setup_scrn_hooks(ScrnInfoPtr scrn)
+Bool
+ega_init_driver(ScrnInfoPtr scrn, int entity_num)
 {
+    if (!scrn)
+        return FALSE;
+
     scrn->driverVersion = 1;
-    scrn->driverName = "modesetting";
-    scrn->name = "modeset";
+    scrn->driverName = "ega";
+    scrn->name = "ega";
 
     scrn->Probe = NULL;
     scrn->PreInit = PreInit;
@@ -376,6 +294,8 @@ ms_setup_scrn_hooks(ScrnInfoPtr scrn)
     scrn->LeaveVT = LeaveVT;
     scrn->FreeScreen = FreeScreen;
     scrn->ValidMode = ValidMode;
+
+    return TRUE;
 }
 
 static void
@@ -395,116 +315,6 @@ ms_setup_entity(ScrnInfoPtr scrn, int entity_num)
 
     if (!pPriv->ptr)
         pPriv->ptr = XNFcallocarray(1, sizeof(modesettingEntRec));
-}
-
-#ifdef XSERVER_LIBPCIACCESS
-static Bool
-ms_pci_probe(DriverPtr driver,
-             int entity_num, struct pci_device *dev, intptr_t match_data)
-{
-    ScrnInfoPtr scrn = NULL;
-
-    scrn = xf86ConfigPciEntity(scrn, 0, entity_num, NULL,
-                               NULL, NULL, NULL, NULL, NULL);
-    if (scrn) {
-        const char *devpath;
-        GDevPtr devSection = xf86GetDevFromEntity(scrn->entityList[0],
-                                                  scrn->entityInstanceList[0]);
-
-        devpath = xf86FindOptionValue(devSection->options, "kmsdev");
-        if (probe_hw_pci(devpath, dev)) {
-            ms_setup_scrn_hooks(scrn);
-
-            xf86DrvMsg(scrn->scrnIndex, X_CONFIG,
-                       "claimed PCI slot %d@%d:%d:%d\n",
-                       dev->bus, dev->domain, dev->dev, dev->func);
-            xf86DrvMsg(scrn->scrnIndex, X_INFO,
-                       "using %s\n", devpath ? devpath : "default device");
-
-            ms_setup_entity(scrn, entity_num);
-        }
-        else
-            scrn = NULL;
-    }
-    return scrn != NULL;
-}
-#endif
-
-#ifdef XSERVER_PLATFORM_BUS
-static Bool
-ms_platform_probe(DriverPtr driver,
-                  int entity_num, int flags, struct xf86_platform_device *dev,
-                  intptr_t match_data)
-{
-    ScrnInfoPtr scrn = NULL;
-    const char *path = xf86_platform_device_odev_attributes(dev)->path;
-    int scr_flags = 0;
-
-    if (flags & PLATFORM_PROBE_GPU_SCREEN)
-        scr_flags = XF86_ALLOCATE_GPU_SCREEN;
-
-    if (probe_hw(path, dev)) {
-        scrn = xf86AllocateScreen(driver, scr_flags);
-        if (xf86IsEntitySharable(entity_num))
-            xf86SetEntityShared(entity_num);
-        xf86AddEntityToScreen(scrn, entity_num);
-
-        ms_setup_scrn_hooks(scrn);
-
-        xf86DrvMsg(scrn->scrnIndex, X_INFO,
-                   "using drv %s\n", path ? path : "default device");
-
-        ms_setup_entity(scrn, entity_num);
-    }
-
-    return scrn != NULL;
-}
-#endif
-
-static Bool
-Probe(DriverPtr drv, int flags)
-{
-    int i, numDevSections;
-    GDevPtr *devSections;
-    Bool foundScreen = FALSE;
-    const char *dev;
-    ScrnInfoPtr scrn = NULL;
-
-    /* For now, just bail out for PROBE_DETECT. */
-    if (flags & PROBE_DETECT)
-        return FALSE;
-
-    /*
-     * Find the config file Device sections that match this
-     * driver, and return if there are none.
-     */
-    if ((numDevSections = xf86MatchDevice("modesetting", &devSections)) <= 0) {
-        return FALSE;
-    }
-
-    for (i = 0; i < numDevSections; i++) {
-        int entity_num;
-        dev = xf86FindOptionValue(devSections[i]->options, "kmsdev");
-        if (probe_hw(dev, NULL)) {
-
-            entity_num = xf86ClaimFbSlot(drv, 0, devSections[i], TRUE);
-            scrn = xf86ConfigFbEntity(scrn, 0, entity_num, NULL, NULL, NULL, NULL);
-        }
-
-        if (scrn) {
-            foundScreen = TRUE;
-            ms_setup_scrn_hooks(scrn);
-            scrn->Probe = Probe;
-
-            xf86DrvMsg(scrn->scrnIndex, X_INFO,
-                       "using %s\n", dev ? dev : "default device");
-            ms_setup_entity(scrn, entity_num);
-        }
-    }
-
-    free(devSections);
-
-    return foundScreen;
 }
 
 static Bool

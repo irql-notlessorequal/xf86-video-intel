@@ -26,6 +26,40 @@
 #ifndef MS_HACK_H
 #define MS_HACK_H
 
+#include <list.h>
+
+#ifndef O_CLOEXEC
+#define O_CLOEXEC	02000000	/* set close_on_exec */
+#endif
+
+/**
+ * This isn't exported, we have to basically
+ * do this. Can't wait for this to explode a few years from now.
+ */
+struct OdevAttributes
+{
+    /* path to kernel device node - Linux e.g. /dev/dri/card0 */
+    char        *path;
+
+    /* system device path - Linux e.g. /sys/devices/pci0000:00/0000:00:01.0/0000:01:00.0/drm/card1 */
+    char        *syspath;
+
+    /* DRI-style bus id */
+    char        *busid;
+
+    /* Server managed FD */
+    int         fd;
+
+    /* Major number of the device node pointed to by ODEV_ATTRIB_PATH */
+    int         major;
+
+    /* Minor number of the device node pointed to by ODEV_ATTRIB_PATH */
+    int         minor;
+
+    /* kernel driver name */
+    char        *driver;
+};
+
 #define POLLIN          0x01
 #define POLLPRI         0x02
 #define POLLOUT         0x04
@@ -39,5 +73,9 @@ struct pollfd
     short   events;
     short   revents;
 };
+
+typedef unsigned long nfds_t;
+
+int xserver_poll (struct pollfd *pArray, nfds_t n_fds, int timeout);
 
 #endif // MS_HACK_H
