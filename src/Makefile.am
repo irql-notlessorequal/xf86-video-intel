@@ -53,6 +53,11 @@ SUBDIRS += uxa
 intel_drv_la_LIBADD += uxa/libuxa.la
 endif
 
+if EGA
+SUBDIRS += ega
+intel_drv_la_LIBADD += ega/libega.la
+endif
+
 NULL:=#
 
 intel_drv_la_SOURCES = \

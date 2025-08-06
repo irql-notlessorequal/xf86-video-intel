@@ -114,9 +114,21 @@ struct xf86_platform_device;
 #define PCI_CHIP_HASWELL_CRW_E_GT2	0x0D1E
 #define PCI_CHIP_HASWELL_CRW_E_GT3	0x0D2E
 
-struct intel_device_info {
-	int gen;
+enum intel_supported_driver
+{
+	DRIVER_NONE    = 0x0,
+	DRIVER_SNA     = 0x2,
+	DRIVER_UXA     = 0x4,
+	DRIVER_EGA     = 0x8
 };
+
+struct intel_device_info
+{
+	int gen;
+
+	unsigned int supported_drivers;
+};
+
 struct intel_device;
 
 int intel_entity_get_devid(int index);

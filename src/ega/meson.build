@@ -28,7 +28,7 @@ ega_c_args += '-DGBM_BO_WITH_MODIFIERS=1'
 ega_c_args += '-DMS_DRI3=1'
 
 subdir('glamor')
-subdir('glamor_egl')
+subdir('glamor_xv')
 
 ega = static_library('ega',
             [ git_version_h, ega_sources ],

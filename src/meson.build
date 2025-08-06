@@ -121,10 +121,21 @@ elif default_accel == 'uxa'
   error('UXA not available, so can\'t selected as the default acceleration method')
 endif
 
+with_ega = get_option('ega')
+if with_ega
+  config.set('USE_EGA', 1)
+  subdir('ega')
+  intel_drv_libs += ega 
+elif default_accel == 'ega'
+  error('EGA not available, so can\'t selected as the default acceleration method')
+endif
+
 if default_accel == 'sna'
   config.set('DEFAULT_ACCEL_METHOD', 'SNA')
 elif default_accel == 'uxa'
   config.set('DEFAULT_ACCEL_METHOD', 'UXA')
+elif default_accel == 'ega'
+  config.set('DEFAULT_ACCEL_METHOD', 'EGA')
 else
   config.set('DEFAULT_ACCEL_METHOD', 'NOACCEL')
 endif

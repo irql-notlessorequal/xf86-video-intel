@@ -56,106 +56,138 @@
 
 static const struct intel_device_info intel_generic_info = {
 	.gen = -1,
+	.supported_drivers = DRIVER_NONE
 };
 
 static const struct intel_device_info intel_i81x_info = {
 	.gen = 010,
+	.supported_drivers = DRIVER_NONE
 };
 
 static const struct intel_device_info intel_i830_info = {
 	.gen = 020,
+	.supported_drivers = DRIVER_SNA | DRIVER_UXA
 };
+
 static const struct intel_device_info intel_i845_info = {
 	.gen = 020,
+	.supported_drivers = DRIVER_SNA | DRIVER_UXA
 };
+
 static const struct intel_device_info intel_i855_info = {
 	.gen = 021,
+	.supported_drivers = DRIVER_SNA | DRIVER_UXA
 };
+
 static const struct intel_device_info intel_i865_info = {
 	.gen = 022,
+	.supported_drivers = DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_i915_info = {
 	.gen = 030,
+	.supported_drivers = DRIVER_SNA | DRIVER_UXA
 };
+
 static const struct intel_device_info intel_i945_info = {
 	.gen = 031,
+	.supported_drivers = DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_g33_info = {
 	.gen = 033,
+	.supported_drivers = DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_i965_info = {
 	.gen = 040,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_g4x_info = {
 	.gen = 045,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_ironlake_info = {
 	.gen = 050,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_sandybridge_info = {
 	.gen = 060,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_ivybridge_info = {
 	.gen = 070,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_valleyview_info = {
 	.gen = 071,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_haswell_info = {
 	.gen = 075,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA | DRIVER_UXA
 };
 
 static const struct intel_device_info intel_broadwell_info = {
 	.gen = 0100,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA
 };
 
 static const struct intel_device_info intel_cherryview_info = {
 	.gen = 0101,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA
 };
 
 static const struct intel_device_info intel_skylake_info = {
 	.gen = 0110,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA
 };
 
 static const struct intel_device_info intel_broxton_info = {
 	.gen = 0111,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA
 };
 
 static const struct intel_device_info intel_kabylake_info = {
 	.gen = 0112,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA
 };
 
 static const struct intel_device_info intel_geminilake_info = {
 	.gen = 0113,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA
 };
 
 static const struct intel_device_info intel_coffeelake_info = {
 	.gen = 0114,
+	.supported_drivers = DRIVER_EGA | DRIVER_SNA
 };
 
 static const struct intel_device_info intel_cannonlake_info = {
 	.gen = 0120,
+	/* Cannon Lake didn't ship with any integrated graphics. */
+	.supported_drivers = DRIVER_NONE
 };
 
 static const struct intel_device_info intel_icelake_info = {
 	.gen = 0130,
+	.supported_drivers = DRIVER_EGA
 };
 
 static const struct intel_device_info intel_elkhartlake_info = {
 	.gen = 0131,
+	.supported_drivers = DRIVER_EGA
 };
 
 static const struct intel_device_info intel_tigerlake_info = {
 	.gen = 0140,
+	.supported_drivers = DRIVER_EGA
 };
 
 static const SymTabRec intel_chipsets[] = {
@@ -664,7 +696,7 @@ _xf86findDriver(const char *ident, XF86ConfDevicePtr p)
 	return NULL;
 }
 
-static enum accel_method { NOACCEL, SNA, UXA } get_accel_method(void)
+static enum accel_method { NOACCEL, SNA, UXA, EGA } get_accel_method(void)
 {
 	enum accel_method accel_method = DEFAULT_ACCEL_METHOD;
 	XF86ConfDevicePtr dev;
@@ -687,10 +719,19 @@ static enum accel_method { NOACCEL, SNA, UXA } get_accel_method(void)
 				accel_method = SNA;
 			else if (strcasecmp(s, "uxa") == 0)
 				accel_method = UXA;
+			else if (strcasecmp(s, "ega") == 0)
+				accel_method = EGA;
 		}
 	}
 
 	return accel_method;
+}
+#endif
+
+#if USE_EGA
+static inline Bool ega_compatable(struct intel_device_info * match_data)
+{
+	return match_data->supported_drivers & DRIVER_EGA;
 }
 #endif
 
@@ -750,6 +791,14 @@ intel_scrn_create(DriverPtr		driver,
 #endif
 	case UXA:
 		return intel_init_scrn(scrn);
+#endif
+
+#if USE_EGA
+    case EGA:
+        if (ega_compatable((struct intel_device_info *)match_data))
+        {
+            return ega_init_driver(scrn, entity_num);
+        }
 #endif
 
 	default:

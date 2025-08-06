@@ -182,25 +182,6 @@ rr_crtc_covering_box_on_secondary(ScreenPtr pScreen, BoxPtr box)
     return NULL;
 }
 
-xf86CrtcPtr
-ms_dri2_crtc_covering_drawable(DrawablePtr pDraw)
-{
-    ScreenPtr pScreen = pDraw->pScreen;
-    RRCrtcPtr crtc = NULL;
-    BoxRec box;
-
-    box.x1 = pDraw->x;
-    box.y1 = pDraw->y;
-    box.x2 = box.x1 + pDraw->width;
-    box.y2 = box.y1 + pDraw->height;
-
-    crtc = rr_crtc_covering_box(pScreen, &box, TRUE);
-    if (crtc) {
-        return crtc->devPrivate;
-    }
-    return NULL;
-}
-
 RRCrtcPtr
 ms_randr_crtc_covering_drawable(DrawablePtr pDraw)
 {

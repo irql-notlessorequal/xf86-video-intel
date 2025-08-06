@@ -425,6 +425,18 @@ if test "x$UXA" != "xno"; then
 	UXA=yes
 fi
 
+AC_ARG_ENABLE(ega,
+          AS_HELP_STRING([--enable-ega],
+                 [Enable Everything Graphically Accelerated (EGA) [default=no]]),
+          [EGA="$enableval"],
+          [EGA=no])
+ 
+if test "x$EGA" != "xno"; then
+    AC_DEFINE(USE_EGA, 1, [Enable EGA support])
+    required_pixman_version=0.24
+    RGA=yes
+fi
+
 PKG_CHECK_MODULES(XORG, [xorg-server >= $required_xorg_server_version xproto fontsproto damageproto pixman-1 >= $required_pixman_version $REQUIRED_MODULES])
 ABI_VERSION=`$PKG_CONFIG --variable=abi_videodrv xorg-server`
 XSERVER_VERSION=`$PKG_CONFIG --modversion xorg-server`
@@ -655,6 +667,10 @@ AC_MSG_CHECKING([whether to include SNA support])
 AM_CONDITIONAL(SNA, test "x$SNA" != "xno")
 AC_MSG_RESULT([$SNA])
 
+AC_MSG_CHECKING([whether to include EGA support])
+AM_CONDITIONAL(EGA, test "x$EGA" != "xno")
+AC_MSG_RESULT([$EGA])
+
 if test "$XVMC" = "yes"; then
 	PKG_CHECK_MODULES(XVMCLIB, [xvmc dri2proto x11 x11-xcb xcb-dri2 xcb-aux libdrm_intel], [], [XVMC="no"])
 fi
@@ -847,6 +863,7 @@ AC_CONFIG_FILES([
                 src/sna/brw/Makefile
                 src/sna/fb/Makefile
                 src/uxa/Makefile
+				src/ega/Makefile
                 xvmc/Makefile
                 xvmc/shader/Makefile
                 xvmc/shader/mc/Makefile
@@ -888,6 +905,20 @@ if test "x$UXA" != "xno"; then
 	else
 		accel_msg="$accel_msg uxa"
 	fi
+fi
+if test "x$EGA" != "xno"; then
+    if test "x$UXA" = "xno"; then
+        if test "$accel" = "none"; then
+            accel_msg="$accel_msg *none"
+        else
+            accel_msg="$accel_msg none"
+        fi
+    fi
+    if test "$accel" = "ega"; then
+        accel_msg="$accel_msg *ega"
+    else
+        accel_msg="$accel_msg ega"
+    fi
 fi
 
 if test "x$dri_msg" = "x"; then
