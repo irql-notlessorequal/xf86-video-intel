@@ -1,6 +1,8 @@
 #ifndef INTEL_DRIVER_H
 #define INTEL_DRIVER_H
 
+#include <xf86str.h>
+
 struct xf86_platform_device;
 
 #define INTEL_VERSION 4000

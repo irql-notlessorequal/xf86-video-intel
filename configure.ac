@@ -684,7 +684,7 @@ AC_MSG_CHECKING([whether to include XvMC support])
 AC_MSG_RESULT([$XVMC])
 AM_CONDITIONAL(XVMC, test "x$XVMC" = "xyes")
 if test "x$XVMC" = "xyes"; then
-	AC_DEFINE(ENABLE_XVMC,1,[Enable XvMC support])
+	AC_DEFINE(XVMC,1,[Enable XvMC support])
 	xvmc_msg=" yes"
 else
 	xvmc_msg=" no"
@@ -871,7 +871,6 @@ AC_CONFIG_FILES([
                 src/uxa/Makefile
 				src/ega/Makefile
 				src/ega/glamor/Makefile
-				src/ega/glamor_xv/Makefile
                 xvmc/Makefile
                 xvmc/shader/Makefile
                 xvmc/shader/mc/Makefile

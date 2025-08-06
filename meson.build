@@ -166,7 +166,7 @@ if with_xvmc
   dependency('xcb-aux', required : true)
   dependency('libdrm_intel', required : true)
 
-  config.set('ENABLE_XVMC', 1)
+  config.set('XVMC', 1)
 endif
 
 with_valgrind = get_option('valgrind')

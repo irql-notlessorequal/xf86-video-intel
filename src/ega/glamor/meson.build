@@ -33,7 +33,9 @@ srcs_glamor = [
     'glamor_sync.c',
 ]
 
-srcs_glamor += 'glamor_xv.c'
+if get_option('xvmc')
+    srcs_glamor += [ 'glamor_xv.c', 'glamor_xf86_xv.c' ]
+endif
 
 epoxy_dep = dependency('epoxy')
 

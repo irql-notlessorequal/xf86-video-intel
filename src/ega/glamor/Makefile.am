@@ -55,7 +55,8 @@ libglamor_la_SOURCES = \
 
 if XVMC
 libglamor_la_SOURCES += \
-	glamor_xv.c
+	glamor_xv.c \
+	glamor_xf86_xv.c
 endif
 
 libglamor_egl_stubs_la_SOURCES = \

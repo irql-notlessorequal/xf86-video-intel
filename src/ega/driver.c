@@ -40,6 +40,8 @@
 #include <X11/extensions/randr.h>
 #include <X11/extensions/Xv.h>
 
+#include "intel_driver.h"
+
 #include "ms_compat.h"
 #include "xf86.h"
 #include "xf86Priv.h"
@@ -67,7 +69,6 @@
 static void AdjustFrame(ScrnInfoPtr pScrn, int x, int y);
 static Bool CloseScreen(ScreenPtr pScreen);
 static Bool EnterVT(ScrnInfoPtr pScrn);
-static const OptionInfoRec *AvailableOptions(int chipid, int busid);
 static ModeStatus ValidMode(ScrnInfoPtr pScrn, DisplayModePtr mode,
                             Bool verbose, int flags);
 static void FreeScreen(ScrnInfoPtr pScrn);
@@ -75,8 +76,6 @@ static void LeaveVT(ScrnInfoPtr pScrn);
 static Bool SwitchMode(ScrnInfoPtr pScrn, DisplayModePtr mode);
 static Bool ScreenInit(ScreenPtr pScreen, int argc, char **argv);
 static Bool PreInit(ScrnInfoPtr pScrn, int flags);
-
-static Bool ms_driver_func(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data);
 
 /* window wrapper functions used to get the notification when
  * the window property changes */
@@ -86,16 +85,6 @@ static Bool restore_property_vector;
 static int (*saved_change_property) (ClientPtr client);
 static int (*saved_delete_property) (ClientPtr client);
 
-#ifdef XSERVER_LIBPCIACCESS
-static const struct pci_id_match ms_device_match[] = {
-    {
-     PCI_MATCH_ANY, PCI_MATCH_ANY, PCI_MATCH_ANY, PCI_MATCH_ANY,
-     0x00030000, 0x00ff0000, 0},
-
-    {0, 0, 0},
-};
-#endif
-
 #ifndef XSERVER_PLATFORM_BUS
 struct xf86_platform_device;
 #endif
@@ -103,16 +92,14 @@ struct xf86_platform_device;
 static const OptionInfoRec Options[] =
 {
     {OPTION_SW_CURSOR, "SWcursor", OPTV_BOOLEAN, {0}, FALSE},
-    {OPTION_DEVICE_PATH, "kmsdev", OPTV_STRING, {0}, FALSE},
     {OPTION_SHADOW_FB, "ShadowFB", OPTV_BOOLEAN, {0}, FALSE},
-    {OPTION_ACCEL_METHOD, "AccelMethod", OPTV_STRING, {0}, FALSE},
     {OPTION_PAGEFLIP, "PageFlip", OPTV_BOOLEAN, {0}, FALSE},
-    {OPTION_ZAPHOD_HEADS, "ZaphodHeads", OPTV_STRING, {0}, FALSE},
+    {OPTION_ZAPHOD, "ZaphodHeads", OPTV_STRING, {0}, FALSE},
     {OPTION_DOUBLE_SHADOW, "DoubleShadow", OPTV_BOOLEAN, {0}, FALSE},
     {OPTION_VARIABLE_REFRESH, "VariableRefresh", OPTV_BOOLEAN, {0}, FALSE},
     {OPTION_USE_GAMMA_LUT, "UseGammaLUT", OPTV_BOOLEAN, {0}, FALSE},
     {OPTION_ASYNC_FLIP_SECONDARIES, "AsyncFlipSecondaries", OPTV_BOOLEAN, {0}, FALSE},
-    {OPTION_TEARFREE, "TearFree", OPTV_BOOLEAN, {0}, FALSE},
+    {OPTION_TEAR_FREE, "TearFree", OPTV_BOOLEAN, {0}, FALSE},
     {-1, NULL, OPTV_NONE, {0}, FALSE}
 };
 
@@ -127,37 +114,19 @@ modesettingEntPtr ms_ent_priv(ScrnInfoPtr scrn)
     return pPriv->ptr;
 }
 
-static int
-get_passed_fd(void)
+static void ms_setup_ent(ScrnInfoPtr scrn, EntityInfoPtr pEnt)
 {
-    if (xf86DRMMasterFd >= 0) {
-        xf86DrvMsg(-1, X_INFO, "Using passed DRM master file descriptor %d\n", xf86DRMMasterFd);
-        return dup(xf86DRMMasterFd);
-    }
-    return -1;
-}
+    DevUnion     *pPriv;
 
-static int
-open_hw(const char *dev)
-{
-    int fd;
+    if (ms_entity_index == -1)
+        ms_entity_index = xf86AllocateEntityPrivateIndex();
 
-    if ((fd = get_passed_fd()) != -1)
-        return fd;
+    pPriv = xf86GetEntityPrivate(pEnt->index, ms_entity_index);
 
-    if (dev)
-        fd = open(dev, O_RDWR | O_CLOEXEC, 0);
-    else {
-        dev = getenv("KMSDEVICE");
-        if ((NULL == dev) || ((fd = open(dev, O_RDWR | O_CLOEXEC, 0)) == -1)) {
-            dev = "/dev/dri/card0";
-            fd = open(dev, O_RDWR | O_CLOEXEC, 0);
-        }
-    }
-    if (fd == -1)
-        xf86DrvMsg(-1, X_ERROR, "open %s: %s\n", dev, strerror(errno));
+    xf86SetEntityInstanceForScreen(scrn, pEnt->index, xf86GetNumEntityInstances(pEnt->index) - 1);
 
-    return fd;
+    if (!pPriv->ptr)
+        pPriv->ptr = xnfcalloc(sizeof(modesettingEntRec), 1);
 }
 
 static int
@@ -185,96 +154,6 @@ check_outputs(int fd, int *count)
     return ret;
 }
 
-static Bool
-probe_hw(const char *dev, struct xf86_platform_device *platform_dev)
-{
-    int fd;
-
-#ifdef XF86_PDEV_SERVER_FD
-    if (platform_dev && (platform_dev->flags & XF86_PDEV_SERVER_FD)) {
-        fd = xf86_platform_device_odev_attributes(platform_dev)->fd;
-        if (fd == -1)
-            return FALSE;
-        return check_outputs(fd, NULL);
-    }
-#endif
-
-    fd = open_hw(dev);
-    if (fd != -1) {
-        int ret = check_outputs(fd, NULL);
-
-        close(fd);
-        return ret;
-    }
-    return FALSE;
-}
-
-static char *
-ms_DRICreatePCIBusID(const struct pci_device *dev)
-{
-    char *busID;
-
-    if (asprintf(&busID, "pci:%04x:%02x:%02x.%d",
-                 dev->domain, dev->bus, dev->dev, dev->func) == -1)
-        return NULL;
-
-    return busID;
-}
-
-static Bool
-probe_hw_pci(const char *dev, struct pci_device *pdev)
-{
-    int ret = FALSE, fd = open_hw(dev);
-    char *id, *devid;
-    drmSetVersion sv;
-
-    if (fd == -1)
-        return FALSE;
-
-    sv.drm_di_major = 1;
-    sv.drm_di_minor = 4;
-    sv.drm_dd_major = -1;
-    sv.drm_dd_minor = -1;
-    if (drmSetInterfaceVersion(fd, &sv)) {
-        close(fd);
-        return FALSE;
-    }
-
-    id = drmGetBusid(fd);
-    devid = ms_DRICreatePCIBusID(pdev);
-
-    if (id && devid && !strcmp(id, devid))
-        ret = check_outputs(fd, NULL);
-
-    close(fd);
-    free(id);
-    free(devid);
-    return ret;
-}
-
-static const OptionInfoRec *
-AvailableOptions(int chipid, int busid)
-{
-    return Options;
-}
-
-static Bool
-ms_driver_func(ScrnInfoPtr scrn, xorgDriverFuncOp op, void *data)
-{
-    xorgHWFlags *flag;
-
-    switch (op) {
-    case GET_REQUIRED_HW_INTERFACES:
-        flag = (CARD32 *) data;
-        (*flag) = 0;
-        return TRUE;
-    case SUPPORTS_SERVER_FDS:
-        return TRUE;
-    default:
-        return FALSE;
-    }
-}
-
 Bool
 ega_init_driver(ScrnInfoPtr scrn, int entity_num)
 {
@@ -283,7 +162,7 @@ ega_init_driver(ScrnInfoPtr scrn, int entity_num)
 
     scrn->driverVersion = 1;
     scrn->driverName = "ega";
-    scrn->name = "ega";
+    scrn->name = "intel";
 
     scrn->Probe = NULL;
     scrn->PreInit = PreInit;
@@ -294,36 +173,6 @@ ega_init_driver(ScrnInfoPtr scrn, int entity_num)
     scrn->LeaveVT = LeaveVT;
     scrn->FreeScreen = FreeScreen;
     scrn->ValidMode = ValidMode;
-
-    return TRUE;
-}
-
-static void
-ms_setup_entity(ScrnInfoPtr scrn, int entity_num)
-{
-    DevUnion *pPriv;
-
-    xf86SetEntitySharable(entity_num);
-
-    if (ms_entity_index == -1)
-        ms_entity_index = xf86AllocateEntityPrivateIndex();
-
-    pPriv = xf86GetEntityPrivate(entity_num,
-                                 ms_entity_index);
-
-    xf86SetEntityInstanceForScreen(scrn, entity_num, xf86GetNumEntityInstances(entity_num) - 1);
-
-    if (!pPriv->ptr)
-        pPriv->ptr = XNFcallocarray(1, sizeof(modesettingEntRec));
-}
-
-static Bool
-GetRec(ScrnInfoPtr pScrn)
-{
-    if (pScrn->driverPrivate)
-        return TRUE;
-
-    pScrn->driverPrivate = XNFcallocarray(1, sizeof(modesettingRec));
 
     return TRUE;
 }
@@ -616,7 +465,7 @@ redisplay_dirty(ScreenPtr screen, PixmapDirtyUpdatePtr dirty, int *timeout)
          * the shared pixmap, but not all).
          */
         if (ms->drmmode.glamor)
-            ms->glamor.finish(screen);
+            glamor_finish(screen);
 #endif
         /* Ensure the secondary processes the damage immediately */
         if (timeout)
@@ -875,48 +724,14 @@ FreeScreen(ScrnInfoPtr pScrn)
 
 }
 
-#ifdef GLAMOR_HAS_GBM
-
-static Bool
-load_glamor(ScrnInfoPtr pScrn)
-{
-    void *mod = xf86LoadSubModule(pScrn, GLAMOR_EGL_MODULE_NAME);
-    modesettingPtr ms = modesettingPTR(pScrn);
-
-    if (!mod)
-        return FALSE;
-
-    ms->glamor.back_pixmap_from_fd = LoaderSymbolFromModule(mod, "glamor_back_pixmap_from_fd");
-    ms->glamor.block_handler = LoaderSymbolFromModule(mod, "glamor_block_handler");
-    ms->glamor.clear_pixmap = LoaderSymbolFromModule(mod, "glamor_clear_pixmap");
-    ms->glamor.egl_create_textured_pixmap = LoaderSymbolFromModule(mod, "glamor_egl_create_textured_pixmap");
-    ms->glamor.egl_create_textured_pixmap_from_gbm_bo = LoaderSymbolFromModule(mod, "glamor_egl_create_textured_pixmap_from_gbm_bo");
-    ms->glamor.egl_exchange_buffers = LoaderSymbolFromModule(mod, "glamor_egl_exchange_buffers");
-    ms->glamor.egl_get_gbm_device = LoaderSymbolFromModule(mod, "glamor_egl_get_gbm_device");
-    ms->glamor.egl_init = LoaderSymbolFromModule(mod, "glamor_egl_init");
-    ms->glamor.finish = LoaderSymbolFromModule(mod, "glamor_finish");
-    ms->glamor.gbm_bo_from_pixmap = LoaderSymbolFromModule(mod, "glamor_gbm_bo_from_pixmap");
-    ms->glamor.init = LoaderSymbolFromModule(mod, "glamor_init");
-    ms->glamor.name_from_pixmap = LoaderSymbolFromModule(mod, "glamor_name_from_pixmap");
-    ms->glamor.set_drawable_modifiers_func = LoaderSymbolFromModule(mod, "glamor_set_drawable_modifiers_func");
-    ms->glamor.shareable_fd_from_pixmap = LoaderSymbolFromModule(mod, "glamor_shareable_fd_from_pixmap");
-    ms->glamor.supports_pixmap_import_export = LoaderSymbolFromModule(mod, "glamor_supports_pixmap_import_export");
-    ms->glamor.xv_init = LoaderSymbolFromModule(mod, "glamor_xv_init");
-    ms->glamor.egl_get_driver_name = LoaderSymbolFromModule(mod, "glamor_egl_get_driver_name");
-
-    return TRUE;
-}
-
-#endif
-
 static void
 try_enable_glamor(ScrnInfoPtr pScrn)
 {
     modesettingPtr ms = modesettingPTR(pScrn);
-    const char *accel_method_str = xf86GetOptValString(ms->drmmode.Options,
-                                                       OPTION_ACCEL_METHOD);
-    Bool do_glamor = (!accel_method_str ||
-                      strcmp(accel_method_str, "glamor") == 0);
+    
+    /* TODO: Turning off GLAMOR in EGA needs
+     *       to be a seperate option.  */
+    const Bool do_glamor = TRUE;
 
     ms->drmmode.glamor = FALSE;
 
@@ -931,17 +746,12 @@ try_enable_glamor(ScrnInfoPtr pScrn)
         return;
     }
 
-    if (load_glamor(pScrn)) {
-        if (ms->glamor.egl_init(pScrn, ms->fd)) {
-            xf86DrvMsg(pScrn->scrnIndex, X_INFO, "glamor initialized\n");
-            ms->drmmode.glamor = TRUE;
-        } else {
-            xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-                       "glamor initialization failed\n");
-        }
+    if (glamor_egl_init(pScrn, ms->fd)) {
+        xf86DrvMsg(pScrn->scrnIndex, X_INFO, "glamor initialized\n");
+        ms->drmmode.glamor = TRUE;
     } else {
-        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-                   "Failed to load glamor module.\n");
+        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
+                   "glamor initialization failed\n");
     }
 #else
     if (do_glamor) {
@@ -952,119 +762,13 @@ try_enable_glamor(ScrnInfoPtr pScrn)
 }
 
 static Bool
-msShouldDoubleShadow(ScrnInfoPtr pScrn, modesettingPtr ms)
-{
-    Bool ret = FALSE, asked;
-    int from;
-    drmVersionPtr v;
-
-    if (!ms->drmmode.shadow_enable)
-        return FALSE;
-
-    if ((v = drmGetVersion(ms->fd))) {
-        if (!strcmp(v->name, "mgag200") ||
-            !strcmp(v->name, "ast")) /* XXX || rn50 */
-            ret = TRUE;
-
-        drmFreeVersion(v);
-    }
-    else
-        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-                   "Failed to query DRM version.\n");
-
-    asked = xf86GetOptValBool(ms->drmmode.Options, OPTION_DOUBLE_SHADOW, &ret);
-
-    if (asked)
-        from = X_CONFIG;
-    else
-        from = X_INFO;
-
-    xf86DrvMsg(pScrn->scrnIndex, from,
-               "Double-buffered shadow updates: %s\n", ret ? "on" : "off");
-
-    return ret;
-}
-
-static Bool
-ms_get_drm_master_fd(ScrnInfoPtr pScrn)
-{
-    EntityInfoPtr pEnt;
-    modesettingPtr ms;
-    modesettingEntPtr ms_ent;
-
-    ms = modesettingPTR(pScrn);
-    ms_ent = ms_ent_priv(pScrn);
-
-    pEnt = ms->pEnt;
-
-    if (ms_ent->fd) {
-        xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-                   " reusing fd for second head\n");
-        ms->fd = ms_ent->fd;
-        ms_ent->fd_ref++;
-        return TRUE;
-    }
-
-    ms->fd_passed = FALSE;
-    if ((ms->fd = get_passed_fd()) >= 0) {
-        ms->fd_passed = TRUE;
-        return TRUE;
-    }
-
-#ifdef XSERVER_PLATFORM_BUS
-    if (pEnt->location.type == BUS_PLATFORM) {
-#ifdef XF86_PDEV_SERVER_FD
-        if (pEnt->location.id.plat->flags & XF86_PDEV_SERVER_FD)
-            ms->fd =
-                xf86_platform_device_odev_attributes(pEnt->location.id.plat)->
-                fd;
-        else
-#endif
-        {
-            char *path =
-                xf86_platform_device_odev_attributes(pEnt->location.id.plat)->
-                path;
-            ms->fd = open_hw(path);
-        }
-    }
-    else
-#endif
-#ifdef XSERVER_LIBPCIACCESS
-    if (pEnt->location.type == BUS_PCI) {
-        char *BusID = NULL;
-        struct pci_device *PciInfo;
-
-        PciInfo = xf86GetPciInfoForEntity(ms->pEnt->index);
-        if (PciInfo) {
-            if ((BusID = ms_DRICreatePCIBusID(PciInfo)) != NULL) {
-                ms->fd = drmOpen(NULL, BusID);
-                free(BusID);
-            }
-        }
-    }
-    else
-#endif
-    {
-        const char *devicename;
-        devicename = xf86FindOptionValue(ms->pEnt->device->options, "kmsdev");
-        ms->fd = open_hw(devicename);
-    }
-    if (ms->fd < 0)
-        return FALSE;
-
-    ms_ent->fd = ms->fd;
-    ms_ent->fd_ref = 1;
-    return TRUE;
-}
-
-static Bool
 PreInit(ScrnInfoPtr pScrn, int flags)
 {
     modesettingPtr ms;
     rgb defaultWeight = { 0, 0, 0 };
     EntityInfoPtr pEnt;
     uint64_t value = 0;
-    int ret;
+    int ret, fd;
     int bppflags, connector_count;
     int defaultdepth, defaultbpp;
 
@@ -1072,16 +776,15 @@ PreInit(ScrnInfoPtr pScrn, int flags)
         return FALSE;
 
     if (flags & PROBE_DETECT) {
-        return FALSE;
+        return TRUE;
     }
-
-    /* Allocate driverPrivate */
-    if (!GetRec(pScrn))
-        return FALSE;
 
     pEnt = xf86GetEntityInfo(pScrn->entityList[0]);
 
-    ms = modesettingPTR(pScrn);
+    /* driverPrivate is already set by the Intel driver, we
+     * need to override it so that we don't explode one line down. */
+    ms = pScrn->driverPrivate = xnfcalloc(sizeof(modesettingRec), 1);
+
     ms->SaveGeneration = -1;
     ms->pEnt = pEnt;
     ms->drmmode.is_secondary = FALSE;
@@ -1098,9 +801,17 @@ PreInit(ScrnInfoPtr pScrn, int flags)
     pScrn->progClock = TRUE;
     pScrn->rgbBits = 8;
 
-    if (!ms_get_drm_master_fd(pScrn))
+    if (!intel_get_device(pScrn, &fd))
         return FALSE;
-    ms->drmmode.fd = ms->fd;
+
+    /* We can't use modesetting's probe. */
+    ms->fd = fd;
+    ms->fd_passed = TRUE;
+    ms->drmmode.fd = fd;
+
+    /* We need to allocate our entity
+     * to avoid writing into the previous one. */
+    ms_setup_ent(pScrn, pEnt);
 
     if (!check_outputs(ms->fd, &connector_count))
         return FALSE;
@@ -1139,9 +850,10 @@ PreInit(ScrnInfoPtr pScrn, int flags)
 
     /* Process the options */
     xf86CollectOptions(pScrn, NULL);
-    if (!(ms->drmmode.Options = malloc(sizeof(Options))))
+    if (!(ms->drmmode.Options = malloc(sizeof(modesettingOpts))))
         return FALSE;
-    memcpy(ms->drmmode.Options, Options, sizeof(Options));
+
+    memcpy(ms->drmmode.Options, Options, sizeof(modesettingOpts));
     xf86ProcessOptions(pScrn->scrnIndex, pScrn->options, ms->drmmode.Options);
 
     if (!xf86SetWeight(pScrn, defaultWeight, defaultWeight))
@@ -1188,8 +900,6 @@ PreInit(ScrnInfoPtr pScrn, int flags)
                    prefer_shadow ? "YES" : "NO",
                    ms->drmmode.force_24_32 ? "FORCE" :
                    ms->drmmode.shadow_enable ? "YES" : "NO");
-
-        ms->drmmode.shadow_enable2 = msShouldDoubleShadow(pScrn, ms);
     } else {
         if (!pScrn->is_gpu) {
             MessageType from = xf86GetOptValBool(ms->drmmode.Options, OPTION_VARIABLE_REFRESH,
@@ -1231,7 +941,7 @@ PreInit(ScrnInfoPtr pScrn, int flags)
     ms->atomic_modeset_capable = (ret == 0);
 
     /* TearFree requires glamor and, if PageFlip is enabled, universal planes */
-    if (xf86ReturnOptValBool(ms->drmmode.Options, OPTION_TEARFREE, TRUE)) {
+    if (xf86ReturnOptValBool(ms->drmmode.Options, OPTION_TEAR_FREE, TRUE)) {
         if (pScrn->is_gpu) {
             xf86DrvMsg(pScrn->scrnIndex, X_WARNING,
                        "TearFree cannot synchronize PRIME; use 'PRIME Synchronization' instead\n");
@@ -1322,84 +1032,12 @@ msShadowWindow(ScreenPtr screen, CARD32 row, CARD32 offset, int mode,
 /* somewhat arbitrary tile size, in pixels */
 #define TILE 16
 
-static int
-msUpdateIntersect(modesettingPtr ms, shadowBufPtr pBuf, BoxPtr box,
-                  xRectangle *prect)
-{
-    int i, dirty = 0, stride = pBuf->pPixmap->devKind, cpp = ms->drmmode.cpp;
-    int width = (box->x2 - box->x1) * cpp;
-    unsigned char *old, *new;
-
-    old = ms->drmmode.shadow_fb2;
-    old += (box->y1 * stride) + (box->x1 * cpp);
-    new = ms->drmmode.shadow_fb;
-    new += (box->y1 * stride) + (box->x1 * cpp);
-
-    for (i = box->y2 - box->y1 - 1; i >= 0; i--) {
-        unsigned char *o = old + i * stride,
-                      *n = new + i * stride;
-        if (memcmp(o, n, width) != 0) {
-            dirty = 1;
-            memcpy(o, n, width);
-        }
-    }
-
-    if (dirty) {
-        prect->x = box->x1;
-        prect->y = box->y1;
-        prect->width = box->x2 - box->x1;
-        prect->height = box->y2 - box->y1;
-    }
-
-    return dirty;
-}
-
 static void
 msUpdatePacked(ScreenPtr pScreen, shadowBufPtr pBuf)
 {
     ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
     modesettingPtr ms = modesettingPTR(pScrn);
     Bool use_3224 = ms->drmmode.force_24_32 && pScrn->bitsPerPixel == 32;
-
-    if (ms->drmmode.shadow_enable2 && ms->drmmode.shadow_fb2) do {
-        RegionPtr damage = DamageRegion(pBuf->pDamage), tiles;
-        BoxPtr extents = RegionExtents(damage);
-        xRectangle *prect;
-        int nrects;
-        int i, j, tx1, tx2, ty1, ty2;
-
-        tx1 = extents->x1 / TILE;
-        tx2 = (extents->x2 + TILE - 1) / TILE;
-        ty1 = extents->y1 / TILE;
-        ty2 = (extents->y2 + TILE - 1) / TILE;
-
-        nrects = (tx2 - tx1) * (ty2 - ty1);
-        if (!(prect = calloc(nrects, sizeof(xRectangle))))
-            break;
-
-        nrects = 0;
-        for (j = ty2 - 1; j >= ty1; j--) {
-            for (i = tx2 - 1; i >= tx1; i--) {
-                BoxRec box;
-
-                box.x1 = max(i * TILE, extents->x1);
-                box.y1 = max(j * TILE, extents->y1);
-                box.x2 = min((i+1) * TILE, extents->x2);
-                box.y2 = min((j+1) * TILE, extents->y2);
-
-                if (RegionContainsRect(damage, &box) != rgnOUT) {
-                    if (msUpdateIntersect(ms, pBuf, &box, prect + nrects)) {
-                        nrects++;
-                    }
-                }
-            }
-        }
-
-        tiles = RegionFromRects(nrects, prect, CT_NONE);
-        RegionIntersect(damage, damage, tiles);
-        RegionDestroy(tiles);
-        free(prect);
-    } while (0);
 
     if (use_3224)
         ms->shadow.Update32to24(pScreen, pBuf);
@@ -1580,12 +1218,6 @@ CreateScreenResources(ScreenPtr pScreen)
     if (ms->drmmode.shadow_enable)
         pixels = ms->drmmode.shadow_fb;
 
-    if (ms->drmmode.shadow_enable2) {
-        ms->drmmode.shadow_fb2 = calloc(1, pScrn->displayWidth * pScrn->virtualY * ((pScrn->bitsPerPixel + 7) >> 3));
-        if (!ms->drmmode.shadow_fb2)
-            ms->drmmode.shadow_enable2 = FALSE;
-    }
-
     if (!pScreen->ModifyPixmapHeader(rootPixmap, -1, -1, -1, -1, -1, pixels))
         FatalError("Couldn't adjust screen pixmap\n");
 
@@ -1640,7 +1272,7 @@ msSharePixmapBacking(PixmapPtr ppix, ScreenPtr secondary, void **handle)
     int ret;
     CARD16 stride;
     CARD32 size;
-    ret = ms->glamor.shareable_fd_from_pixmap(ppix->drawable.pScreen, ppix,
+    ret = glamor_shareable_fd_from_pixmap(ppix->drawable.pScreen, ppix,
                                               &stride, &size);
     if (ret == -1)
         return FALSE;
@@ -1666,7 +1298,7 @@ msSetSharedPixmapBacking(PixmapPtr ppix, void *fd_handle)
            return drmmode_SetSlaveBO(ppix, &ms->drmmode, ihandle, 0, 0);
 
     if (ms->drmmode.reverse_prime_offload_mode) {
-        ret = ms->glamor.back_pixmap_from_fd(ppix, ihandle,
+        ret = glamor_back_pixmap_from_fd(ppix, ihandle,
                                              ppix->drawable.width,
                                              ppix->drawable.height,
                                              ppix->devKind,
@@ -1788,7 +1420,7 @@ ScreenInit(ScreenPtr pScreen, int argc, char **argv)
 
 #ifdef GLAMOR_HAS_GBM
     if (ms->drmmode.glamor)
-        ms->drmmode.gbm = ms->glamor.egl_get_gbm_device(pScreen);
+        ms->drmmode.gbm = glamor_egl_get_gbm_device(pScreen);
 #endif
 
     /* HW dependent - FIXME */
@@ -1925,11 +1557,11 @@ ScreenInit(ScreenPtr pScreen, int argc, char **argv)
 
     xf86DPMSInit(pScreen, xf86DPMSSet, 0);
 
-#ifdef GLAMOR_HAS_GBM
+#if defined(GLAMOR_HAS_GBM) && defined(XVMC)
     if (ms->drmmode.glamor) {
         XF86VideoAdaptorPtr     glamor_adaptor;
 
-        glamor_adaptor = ms->glamor.xv_init(pScreen, 16);
+        glamor_adaptor = glamor_xv_init(pScreen, 16);
         if (glamor_adaptor != NULL)
             xf86XVScreenInit(pScreen, &glamor_adaptor, 1);
         else

@@ -427,7 +427,7 @@ extern void _X_EXPORT glamor_copy_window(WindowPtr window, DDXPointRec old_origi
 extern _X_EXPORT void glamor_finish(ScreenPtr screen);
 #define HAS_GLAMOR_TEXT 1
 
-#ifdef GLAMOR_FOR_XORG
+#if defined(GLAMOR_FOR_XORG) && defined(XVMC)
 extern _X_EXPORT XF86VideoAdaptorPtr glamor_xv_init(ScreenPtr pScreen,
                                                     int num_texture_ports);
 #endif
