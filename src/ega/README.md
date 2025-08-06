@@ -1,0 +1,26 @@
+# Everything Graphically Accelerated
+ 
+This is the no fun option, using GLAMOR where possible to render GPU tasks, leaving the CPU
+free to perform other tasks.
+ 
+Intended to take advantage of both GLAMOR and UXA's blitter interface in order to accelerate desktop graphics,
+meaning that all graphical operations are performed on the GPU. While copies are done using the blitter engine,
+within limitations.
+ 
+EGA requires at least OpenGL 2.1 support, which is the bare minimum for GLAMOR.
+Therefore pre-GMA X3100 era hardware (gen 4.x) will not work with EGA, such hardware will be forced
+into using either SNA, UXA or software rendering instead.
+ 
+Benefits over SNA/UXA:
+- Runs entirely on the GPU, no CPU usage for 2D.
+- Better compatibility, supports more modern Intel hardware.
+- More flexible usage of the blitter engine, where applicable.
+ 
+TODO:
+- Implement EGA. []
+- Get basic EGA acceleration working. []
+- See if it's feasible to utilize the BLT engine in scenarios. []
+    - Implement BLT where applicable to help with Glamor acceleration. []
+    - Allow disabling it. []
+    - Don't use BLT on Gen 7.x if mitigations are active. []
+- Add support for modern Intel hardware (a la Gen20/Xe2) []
