@@ -1,6 +1,8 @@
 #ifndef INTEL_DRIVER_H
 #define INTEL_DRIVER_H
 
+#include <xf86str.h>
+
 struct xf86_platform_device;
 
 #define INTEL_VERSION 4000
@@ -122,11 +124,20 @@ enum intel_supported_driver
 	DRIVER_EGA     = 0x8
 };
 
+enum intel_hardware_flags
+{
+	HW_FLAGS_NONE = 0x0,
+};
+
 struct intel_device_info
 {
 	int gen;
 
+	/* See `enum intel_supported_driver`  */
 	unsigned int supported_drivers;
+
+	/* See `enum intel_hardware_flags` */
+	unsigned int hardware_flags;
 };
 
 struct intel_device;

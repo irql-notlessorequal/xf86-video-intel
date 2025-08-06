@@ -31,7 +31,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <xf86xv.h>
 #include <fourcc.h>
 
-#if defined(XvMCExtension) && defined(ENABLE_XVMC)
+#if defined(XvMCExtension) && defined(XVMC)
 #define SNA_XVMC 1
 #endif
 

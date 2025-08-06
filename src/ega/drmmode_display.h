@@ -115,7 +115,6 @@ typedef struct {
 
     Bool glamor;
     Bool shadow_enable;
-    Bool shadow_enable2;
     /** Is Option "PageFlip" enabled? */
     Bool pageflip;
     Bool force_24_32;

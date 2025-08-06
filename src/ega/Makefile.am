@@ -19,7 +19,15 @@
 #  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 SUBDIRS = 
-AM_CFLAGS = $(DIX_CFLAGS) $(XORG_CFLAGS) $(DRM_CFLAGS) $(DRMINTEL_CFLAGS) $(EPOXY_CFLAGS) $(UDEV_CFLAGS) $(CWARNFLAGS)
+AM_CFLAGS = $(DIX_CFLAGS) $(XORG_CFLAGS) $(DRM_CFLAGS) $(DRMINTEL_CFLAGS) \
+            $(EPOXY_CFLAGS) $(UDEV_CFLAGS) $(CWARNFLAGS) \
+			-I$(top_srcdir)/src \
+			-DWITH_LIBDRM=1 \
+            -DGLAMOR_HAS_EGL_QUERY_DMABUF=1 \
+			-DGLAMOR_HAS_EGL_QUERY_DRIVER=1 \
+			-DGLXEXT=1 -DGLAMOR=1 \ 
+			-DGLAMOR_HAS_GBM=1 -DGLAMOR_HAS_GBM_LINEAR=1 \
+			-DGBM_BO_WITH_MODIFIERS=1
 
 AM_CPPFLAGS = \
 	$(XORG_INCS) \
@@ -32,9 +40,6 @@ libega_la_ladir = @moduledir@/drivers
 
 SUBDIRS += glamor
 libega_la_LIBADD += glamor/libglamor.la
-
-# SUBDIRS += glamor_xv
-# libega_la_LIBADD += glamor_xv/libglamoregl.la
 
 libega_la_SOURCES = \
 	 ega_module.h \

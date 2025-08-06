@@ -807,6 +807,11 @@ intel_scrn_create(DriverPtr		driver,
 		return sna_init_scrn(scrn, entity_num);
 #elif USE_UXA
 		return intel_init_scrn(scrn);
+#elif USE_EGA
+		if (ega_compatable((struct intel_device_info *)match_data))
+        {
+            return ega_init_driver(scrn, entity_num);
+        }
 #else
 		break;
 #endif

@@ -411,9 +411,9 @@ ms_do_pageflip(ScreenPtr screen,
         return TRUE;
     }
 
-    ms->glamor.block_handler(screen);
+    glamor_block_handler(screen);
 
-    new_front_bo.gbm = ms->glamor.gbm_bo_from_pixmap(screen, new_front);
+    new_front_bo.gbm = glamor_gbm_bo_from_pixmap(screen, new_front);
     new_front_bo.dumb = NULL;
 
     if (!new_front_bo.gbm) {

@@ -30,7 +30,7 @@ enum intel_options {
 	OPTION_PREFER_OVERLAY,
 	OPTION_HOTPLUG,
 	OPTION_REPROBE,
-#if defined(XvMCExtension) && defined(ENABLE_XVMC)
+#if defined(XvMCExtension) && defined(XVMC)
 	OPTION_XVMC,
 #define INTEL_XVMC 1
 #endif
@@ -47,6 +47,13 @@ enum intel_options {
 	OPTION_DEBUG_FLUSH_CACHES,
 	OPTION_DEBUG_WAIT,
 	OPTION_BUFFER_CACHE,
+#endif
+#ifdef USE_EGA
+	OPTION_SW_CURSOR,
+	OPTION_SHADOW_FB,
+	OPTION_VARIABLE_REFRESH,
+	OPTION_USE_GAMMA_LUT,
+	OPTION_ASYNC_FLIP_SECONDARIES,
 #endif
 	NUM_OPTIONS,
 };

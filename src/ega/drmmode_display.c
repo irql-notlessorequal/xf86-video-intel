@@ -1143,7 +1143,7 @@ create_pixmap_for_fbcon(drmmode_ptr drmmode, ScrnInfoPtr pScrn, int fbcon_id)
     if (!pixmap)
         goto out_free_fb;
 
-    ret = ms->glamor.egl_create_textured_pixmap(pixmap, fbcon->handle,
+    ret = glamor_egl_create_textured_pixmap(pixmap, fbcon->handle,
                                                 fbcon->pitch);
     if (!ret) {
       FreePixmap(pixmap);
@@ -1229,7 +1229,7 @@ drmmode_copy_damage(xf86CrtcPtr crtc, PixmapPtr dst, RegionPtr dmg, Bool empty)
         RegionEmpty(dmg);
 
     /* Wait until the GC operations finish */
-    modesettingPTR(crtc->scrn)->glamor.finish(pScreen);
+    glamor_finish(pScreen);
 #endif
 }
 
@@ -1723,7 +1723,7 @@ drmmode_clear_pixmap(PixmapPtr pixmap)
     modesettingPtr ms = modesettingPTR(xf86ScreenToScrn(screen));
 
     if (ms->drmmode.glamor) {
-        ms->glamor.clear_pixmap(pixmap);
+        glamor_clear_pixmap(pixmap);
         return;
     }
 #endif
@@ -3069,7 +3069,7 @@ drmmode_output_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode, drmModeResPtr mode_r
     }
 
     if (xf86IsEntityShared(pScrn->entityList[0])) {
-        if ((s = xf86GetOptValString(drmmode->Options, OPTION_ZAPHOD_HEADS))) {
+        if ((s = xf86GetOptValString(drmmode->Options, OPTION_ZAPHOD))) {
             if (!drmmode_zaphod_string_matches(pScrn, s, name))
                 goto out_free_encoders;
         } else {
@@ -3209,7 +3209,7 @@ drmmode_set_pixmap_bo(drmmode_ptr drmmode, PixmapPtr pixmap, drmmode_bo *bo)
     if (!drmmode->glamor)
         return TRUE;
 
-    if (!ms->glamor.egl_create_textured_pixmap_from_gbm_bo(pixmap, bo->gbm,
+    if (!glamor_egl_create_textured_pixmap_from_gbm_bo(pixmap, bo->gbm,
                                                            bo->used_modifiers)) {
         xf86DrvMsg(scrn->scrnIndex, X_ERROR, "Failed to create pixmap\n");
         return FALSE;
@@ -3282,13 +3282,6 @@ drmmode_xf86crtc_resize(ScrnInfoPtr scrn, int width, int height)
             goto fail;
         free(drmmode->shadow_fb);
         drmmode->shadow_fb = new_pixels;
-    }
-
-    if (drmmode->shadow_enable2) {
-        uint32_t size = scrn->displayWidth * scrn->virtualY * cpp;
-        void *fb2 = calloc(1, size);
-        free(drmmode->shadow_fb2);
-        drmmode->shadow_fb2 = fb2;
     }
 
     screen->ModifyPixmapHeader(ppix, width, height, -1, -1,
@@ -3531,11 +3524,11 @@ drmmode_init(ScrnInfoPtr pScrn, drmmode_ptr drmmode)
     modesettingPtr ms = modesettingPTR(pScrn);
 
     if (drmmode->glamor) {
-        if (!ms->glamor.init(pScreen, GLAMOR_USE_EGL_SCREEN)) {
+        if (!glamor_init(pScreen, GLAMOR_USE_EGL_SCREEN)) {
             return FALSE;
         }
 #ifdef GBM_BO_WITH_MODIFIERS
-        ms->glamor.set_drawable_modifiers_func(pScreen, get_drawable_modifiers);
+        glamor_set_drawable_modifiers_func(pScreen, get_drawable_modifiers);
 #endif
     }
 #endif
