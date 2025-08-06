@@ -115,9 +115,9 @@ static Bool ms_platform_probe(DriverPtr driver,
                               intptr_t match_data);
 #endif
 
-_X_EXPORT DriverRec modesetting = {
+_X_EXPORT DriverRec ega = {
     1,
-    "modesetting",
+    "ega",
     Identify,
     Probe,
     AvailableOptions,
@@ -144,7 +144,6 @@ static const OptionInfoRec Options[] = {
     {OPTION_PAGEFLIP, "PageFlip", OPTV_BOOLEAN, {0}, FALSE},
     {OPTION_ZAPHOD_HEADS, "ZaphodHeads", OPTV_STRING, {0}, FALSE},
     {OPTION_DOUBLE_SHADOW, "DoubleShadow", OPTV_BOOLEAN, {0}, FALSE},
-    {OPTION_ATOMIC, "Atomic", OPTV_BOOLEAN, {0}, FALSE},
     {OPTION_VARIABLE_REFRESH, "VariableRefresh", OPTV_BOOLEAN, {0}, FALSE},
     {OPTION_USE_GAMMA_LUT, "UseGammaLUT", OPTV_BOOLEAN, {0}, FALSE},
     {OPTION_ASYNC_FLIP_SECONDARIES, "AsyncFlipSecondaries", OPTV_BOOLEAN, {0}, FALSE},
@@ -1418,17 +1417,6 @@ PreInit(ScrnInfoPtr pScrn, int flags)
     ret = drmSetClientCap(ms->fd, DRM_CLIENT_CAP_ATOMIC, 0);
     ms->atomic_modeset_capable = (ret == 0);
 
-    if (xf86ReturnOptValBool(ms->drmmode.Options, OPTION_ATOMIC, FALSE)) {
-        ret = drmSetClientCap(ms->fd, DRM_CLIENT_CAP_ATOMIC, 1);
-        ms->atomic_modeset = (ret == 0);
-        if (!ms->atomic_modeset)
-            xf86DrvMsg(pScrn->scrnIndex, X_WARNING, "Atomic modesetting not supported\n");
-    } else {
-        ms->atomic_modeset = FALSE;
-    }
-    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-               "Atomic modesetting %sabled\n", ms->atomic_modeset ? "en" : "dis");
-
     /* TearFree requires glamor and, if PageFlip is enabled, universal planes */
     if (xf86ReturnOptValBool(ms->drmmode.Options, OPTION_TEARFREE, TRUE)) {
         if (pScrn->is_gpu) {
@@ -1436,7 +1424,7 @@ PreInit(ScrnInfoPtr pScrn, int flags)
                        "TearFree cannot synchronize PRIME; use 'PRIME Synchronization' instead\n");
         } else if (ms->drmmode.glamor) {
             /* Atomic modesetting implicitly enables universal planes */
-            if (!ms->drmmode.pageflip || ms->atomic_modeset ||
+            if (!ms->drmmode.pageflip ||
                 !drmSetClientCap(ms->fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1)) {
                 ms->drmmode.tearfree_enable = TRUE;
                 xf86DrvMsg(pScrn->scrnIndex, X_INFO, "TearFree: enabled\n");
@@ -2122,10 +2110,7 @@ ScreenInit(ScreenPtr pScreen, int argc, char **argv)
     if (!drmmode_setup_colormap(pScreen, pScrn))
         return FALSE;
 
-    if (ms->atomic_modeset)
-        xf86DPMSInit(pScreen, drmmode_set_dpms, 0);
-    else
-        xf86DPMSInit(pScreen, xf86DPMSSet, 0);
+    xf86DPMSInit(pScreen, xf86DPMSSet, 0);
 
 #ifdef GLAMOR_HAS_GBM
     if (ms->drmmode.glamor) {
