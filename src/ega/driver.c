@@ -40,6 +40,7 @@
 #include <X11/extensions/randr.h>
 #include <X11/extensions/Xv.h>
 
+#include "glamor_ugly_hack.h"
 #include "xf86.h"
 #include "xf86Priv.h"
 #include "xf86_OSproc.h"
@@ -275,6 +276,7 @@ probe_hw(const char *dev, struct xf86_platform_device *platform_dev)
 
 #ifdef XF86_PDEV_SERVER_FD
     if (platform_dev && (platform_dev->flags & XF86_PDEV_SERVER_FD)) {
+        struct OdevAttributes sd;
         fd = xf86_platform_device_odev_attributes(platform_dev)->fd;
         if (fd == -1)
             return FALSE;
