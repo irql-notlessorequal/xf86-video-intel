@@ -209,16 +209,11 @@ Bool ms_drm_queue_is_empty(void);
 
 Bool xf86_crtc_on(xf86CrtcPtr crtc);
 
-xf86CrtcPtr ms_dri2_crtc_covering_drawable(DrawablePtr pDraw);
 RRCrtcPtr   ms_randr_crtc_covering_drawable(DrawablePtr pDraw);
 
 int ms_get_crtc_ust_msc(xf86CrtcPtr crtc, CARD64 *ust, CARD64 *msc);
 
 uint64_t ms_kernel_msc_to_crtc_msc(xf86CrtcPtr crtc, uint64_t sequence, Bool is64bit);
-
-
-Bool ms_dri2_screen_init(ScreenPtr screen);
-void ms_dri2_close_screen(ScreenPtr screen);
 
 Bool ms_vblank_screen_init(ScreenPtr screen);
 void ms_vblank_close_screen(ScreenPtr screen);

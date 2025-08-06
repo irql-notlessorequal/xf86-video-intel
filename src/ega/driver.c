@@ -156,7 +156,7 @@ int ms_entity_index = -1;
 static MODULESETUPPROTO(Setup);
 
 static XF86ModuleVersionInfo VersRec = {
-    .modname      = "modesetting",
+    .modname      = "ega",
     .vendor       = MODULEVENDORSTRING,
     ._modinfo1_   = MODINFOSTRING1,
     ._modinfo2_   = MODINFOSTRING2,
@@ -169,7 +169,7 @@ static XF86ModuleVersionInfo VersRec = {
     .moduleclass  = MOD_CLASS_VIDEODRV,
 };
 
-_X_EXPORT XF86ModuleData modesettingModuleData = {
+_X_EXPORT XF86ModuleData egaModuleData = {
     .vers = &VersRec,
     .setup = Setup
 };
@@ -183,7 +183,7 @@ Setup(void *module, void *opts, int *errmaj, int *errmin)
      */
     if (!setupDone) {
         setupDone = 1;
-        xf86AddDriver(&modesetting, module, HaveDriverFuncs);
+        xf86AddDriver(&ega, module, HaveDriverFuncs);
 
         /*
          * The return value must be non-NULL on success even though there
@@ -201,7 +201,7 @@ Setup(void *module, void *opts, int *errmaj, int *errmin)
 static void
 Identify(int flags)
 {
-    xf86PrintChipsets("modesetting", "Driver for Modesetting Kernel Drivers",
+    xf86PrintChipsets("ega", "Modesetting Driver Modified for Intel Hardware",
                       Chipsets);
 }
 
@@ -700,7 +700,7 @@ ms_tearfree_do_flips(ScreenPtr pScreen)
         /* Skip if the last flip is still pending, a DRI client is flipping, or
          * there isn't any damage on the front buffer.
          */
-        if (trf->flip_seq || ms->drmmode.dri2_flipping ||
+        if (trf->flip_seq || 
             ms->drmmode.present_flipping ||
             RegionNil(&trf->buf[trf->back_idx ^ 1].dmg))
             continue;
@@ -2136,38 +2136,13 @@ ScreenInit(ScreenPtr pScreen, int argc, char **argv)
 
 #ifdef GLAMOR_HAS_GBM
     if (ms->drmmode.glamor) {
-        if (!(ms->drmmode.dri2_enable = ms_dri2_screen_init(pScreen))) {
-            xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
-                       "Failed to initialize the DRI2 extension.\n");
-        }
-
         /* enable reverse prime if we are a GPU screen, and accelerated, and not
          * i915, evdi or udl. i915 is happy scanning out from sysmem.
          * evdi and udl are virtual drivers scanning out from sysmem
          * backed dumb buffers.
          */
         if (pScreen->isGPU) {
-            drmVersionPtr version;
-
-            /* enable if we are an accelerated GPU screen */
-            ms->drmmode.reverse_prime_offload_mode = TRUE;
-
-            if ((version = drmGetVersion(ms->drmmode.fd))) {
-                if (!strncmp("i915", version->name, version->name_len)) {
-                    ms->drmmode.reverse_prime_offload_mode = FALSE;
-                }
-                if (!strncmp("evdi", version->name, version->name_len)) {
-                    ms->drmmode.reverse_prime_offload_mode = FALSE;
-                }
-                if (!strncmp("udl", version->name, version->name_len)) {
-                    ms->drmmode.reverse_prime_offload_mode = FALSE;
-                }
-                if (!ms->drmmode.reverse_prime_offload_mode) {
-                    xf86DrvMsg(pScrn->scrnIndex, X_INFO,
-                       "Disable reverse prime offload mode for %s.\n", version->name);
-                }
-                drmFreeVersion(version);
-            }
+            ms->drmmode.reverse_prime_offload_mode = FALSE;
         }
     }
 #endif
@@ -2175,7 +2150,6 @@ ScreenInit(ScreenPtr pScreen, int argc, char **argv)
         xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
                    "Failed to initialize the Present extension.\n");
     }
-
 
     pScrn->vtSema = TRUE;
 
@@ -2271,12 +2245,6 @@ CloseScreen(ScreenPtr pScreen)
 
     /* Clear mask of assigned crtc's in this generation */
     ms_ent->assigned_crtcs = 0;
-
-#ifdef GLAMOR_HAS_GBM
-    if (ms->drmmode.dri2_enable) {
-        ms_dri2_close_screen(pScreen);
-    }
-#endif
 
     ms_vblank_close_screen(pScreen);
 

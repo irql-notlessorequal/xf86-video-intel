@@ -1001,6 +1001,8 @@ glamor_egl_try_big_gl_api(ScrnInfoPtr scrn)
             GLAMOR_GL_CORE_VER_MAJOR,
             EGL_CONTEXT_MINOR_VERSION_KHR,
             GLAMOR_GL_CORE_VER_MINOR,
+            EGL_CONTEXT_PRIORITY_LEVEL_IMG,
+            EGL_CONTEXT_PRIORITY_HIGH_IMG,
             EGL_NONE
         };
         static const EGLint config_attribs[] = {
@@ -1048,6 +1050,8 @@ glamor_egl_try_gles_api(ScrnInfoPtr scrn)
         
     static const EGLint config_attribs[] = {
         EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_CONTEXT_PRIORITY_LEVEL_IMG,
+        EGL_CONTEXT_PRIORITY_HIGH_IMG,
         EGL_NONE
     };
     if (!eglBindAPI(EGL_OPENGL_ES_API)) {
@@ -1213,15 +1217,8 @@ glamor_egl_init(ScrnInfoPtr scrn, int fd)
                                 "EGL_EXT_image_dma_buf_import") &&
         epoxy_has_egl_extension(glamor_egl->display,
                                 "EGL_EXT_image_dma_buf_import_modifiers")) {
-        if (xf86Info.debug != NULL)
-            glamor_egl->dmabuf_capable = !!strstr(xf86Info.debug,
-                                                  "dmabuf_capable");
-        else if (strstr((const char *)renderer, "Intel"))
-            glamor_egl->dmabuf_capable = TRUE;
-        else if (strstr((const char *)renderer, "zink"))
-            glamor_egl->dmabuf_capable = TRUE;
-        else
-            glamor_egl->dmabuf_capable = FALSE;
+
+        glamor_egl->dmabuf_capable = TRUE;
     }
 #endif
 

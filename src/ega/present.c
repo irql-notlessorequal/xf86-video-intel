@@ -251,9 +251,6 @@ ms_present_check_unflip(RRCrtcPtr crtc,
     if (!ms->drmmode.pageflip)
         return FALSE;
 
-    if (ms->drmmode.dri2_flipping)
-        return FALSE;
-
     if (!scrn->vtSema)
         return FALSE;
 

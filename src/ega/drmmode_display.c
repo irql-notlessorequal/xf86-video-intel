@@ -232,7 +232,7 @@ get_drawable_modifiers(DrawablePtr draw, uint32_t format,
     modesettingPtr ms = modesettingPTR(scrn);
 
     if (!present_can_window_flip((WindowPtr) draw) ||
-        !ms->drmmode.pageflip || ms->drmmode.dri2_flipping || !scrn->vtSema) {
+        !ms->drmmode.pageflip || !scrn->vtSema) {
         *num_modifiers = 0;
         *modifiers = NULL;
         return TRUE;
