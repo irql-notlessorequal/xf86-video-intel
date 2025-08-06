@@ -305,6 +305,14 @@ list_is_empty(const struct list *head)
 #define list_last_entry(ptr, type, member) \
     list_entry((ptr)->prev, type, member)
 
+#ifdef __container_of
+/**
+ * Xorg's list.h contains a define named
+ * exactly this, call undef to mute some warnings.
+ */
+#undef __container_of
+#endif
+
 #define __container_of(ptr, sample, member)				\
     (void *)((char *)(ptr) - ((char *)&(sample)->member - (char *)(sample)))
 /**
