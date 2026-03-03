@@ -110,6 +110,7 @@ static void *setup_msc(Display *dpy, Window win)
 
 	error = xcb_request_check(c, cookie);
 	assert(error == NULL);
+	free(error);
 
 	return q;
 }
