@@ -430,7 +430,7 @@ _X_EXPORT Status XvMCCreateSurface(Display * display, XvMCContext * context,
 	intel_surf->context = context;
 
 	intel_surf->image = XvCreateImage(display, context->port,
-					  FOURCC_XVMC,
+					  INTEL_FOURCC_XVMC,
 					  (char *) &intel_surf->gem_handle,
 					  surface->width, surface->height);
 	if (!intel_surf->image) {

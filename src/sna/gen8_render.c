@@ -3789,7 +3789,7 @@ static void gen8_emit_video_state(struct sna *sna,
 		}
 		n_src = 6;
 	} else {
-		if (frame->id == FOURCC_RGB888)
+		if (frame->id == INTEL_FOURCC_RGB888)
 			src_surf_format[0] = SURFACEFORMAT_B8G8R8X8_UNORM;
 		else if (frame->id == FOURCC_UYVY)
 			src_surf_format[0] = SURFACEFORMAT_YCRCB_SWAPY;
@@ -3829,7 +3829,7 @@ static unsigned select_video_kernel(const struct sna_video *video,
 	switch (frame->id) {
 	case FOURCC_YV12:
 	case FOURCC_I420:
-	case FOURCC_XVMC:
+	case INTEL_FOURCC_XVMC:
 		return video->colorspace ?
 			GEN8_WM_KERNEL_VIDEO_PLANAR_BT709 :
 			GEN8_WM_KERNEL_VIDEO_PLANAR_BT601;
@@ -3839,8 +3839,8 @@ static unsigned select_video_kernel(const struct sna_video *video,
 			GEN8_WM_KERNEL_VIDEO_NV12_BT709 :
 			GEN8_WM_KERNEL_VIDEO_NV12_BT601;
 
-	case FOURCC_RGB888:
-	case FOURCC_RGB565:
+	case INTEL_FOURCC_RGB888:
+	case INTEL_FOURCC_RGB565:
 		return GEN8_WM_KERNEL_VIDEO_RGB;
 
 	default:

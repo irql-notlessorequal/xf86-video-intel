@@ -32,7 +32,7 @@
 #define INTEL_XVMC_MINOR	1
 #define INTEL_XVMC_PATCHLEVEL	0
 
-#define FOURCC_XVMC     (('C' << 24) + ('M' << 16) + ('V' << 8) + 'X')
+#define INTEL_FOURCC_XVMC     (('C' << 24) + ('M' << 16) + ('V' << 8) + 'X')
 
 /*
  * Commands that client submits through XvPutImage:

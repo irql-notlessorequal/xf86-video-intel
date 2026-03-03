@@ -411,11 +411,11 @@ sna_video_sprite_show(struct sna *sna,
 		}
 
 		switch (frame->id) {
-		case FOURCC_RGB565:
+		case INTEL_FOURCC_RGB565:
 			f.pixel_format = DRM_FORMAT_RGB565;
 			purged = sna->scrn->depth != 16;
 			break;
-		case FOURCC_RGB888:
+		case INTEL_FOURCC_RGB888:
 			f.pixel_format = DRM_FORMAT_XRGB8888;
 			purged = sna->scrn->depth != 24;
 			break;
@@ -676,7 +676,7 @@ off:
 			frame.bo = kgem_bo_reference(__sna_pixmap_get_bo(scaled));
 			kgem_bo_submit(&sna->kgem, frame.bo);
 
-			frame.id = FOURCC_RGB888;
+			frame.id = INTEL_FOURCC_RGB888;
 			frame.src = frame.image = r.extents;
 			frame.width = frame.image.x2;
 			frame.height = frame.image.y2;
@@ -736,8 +736,8 @@ static int sna_video_sprite_query(ddQueryImageAttributes_ARGS)
 		offsets[0] = 0;
 
 	switch (format->id) {
-	case FOURCC_RGB888:
-	case FOURCC_RGB565:
+	case INTEL_FOURCC_RGB888:
+	case INTEL_FOURCC_RGB565:
 		if (pitches) {
 			sna_video_frame_init(video, format->id, *w, *h, &frame);
 			sna_video_frame_set_rotation(video, &frame, RR_Rotate_0);

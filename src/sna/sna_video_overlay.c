@@ -609,7 +609,7 @@ sna_video_overlay_query(ddQueryImageAttributes_ARGS)
 		offsets[0] = 0;
 
 	switch (format->id) {
-	case FOURCC_XVMC:
+	case INTEL_FOURCC_XVMC:
 		*h = (*h + 1) & ~1;
 		sna_video_frame_init(video, format->id, *w, *h, &frame);
 		sna_video_frame_set_rotation(video, &frame, RR_Rotate_0);

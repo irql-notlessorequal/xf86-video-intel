@@ -356,7 +356,7 @@ sna_video_textured_query(ddQueryImageAttributes_ARGS)
 			pitches[0] = size;
 		size *= *h;
 		break;
-	case FOURCC_XVMC:
+	case INTEL_FOURCC_XVMC:
 		*h = (*h + 1) & ~1;
 		size = sizeof(uint32_t);
 		if (pitches)

@@ -116,7 +116,7 @@ intel_uxa_video_set_port_attribute(ScrnInfoPtr scrn,
 static int xvmc_passthrough(int id)
 {
 #ifdef INTEL_XVMC
-	return id == FOURCC_XVMC;
+	return id == INTEL_FOURCC_XVMC;
 #else
 	return 0;
 #endif

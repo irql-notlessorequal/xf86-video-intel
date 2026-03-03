@@ -35,9 +35,9 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define SNA_XVMC 1
 #endif
 
-#define FOURCC_XVMC (('C' << 24) + ('M' << 16) + ('V' << 8) + 'X')
-#define FOURCC_RGB565 ((16 << 24) + ('B' << 16) + ('G' << 8) + 'R')
-#define FOURCC_RGB888 ((24 << 24) + ('B' << 16) + ('G' << 8) + 'R')
+#define INTEL_FOURCC_XVMC (('C' << 24) + ('M' << 16) + ('V' << 8) + 'X')
+#define INTEL_FOURCC_RGB565 ((16 << 24) + ('B' << 16) + ('G' << 8) + 'R')
+#define INTEL_FOURCC_RGB888 ((24 << 24) + ('B' << 16) + ('G' << 8) + 'R')
 #ifndef FOURCC_NV12
 #define FOURCC_NV12 (('2' << 24) + ('1' << 16) + ('V' << 8) + 'N')
 #endif
@@ -50,7 +50,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * Defined to have a zero data size.
  */
 #define XVMC_YUV { \
-	FOURCC_XVMC, XvYUV, LSBFirst, \
+	INTEL_FOURCC_XVMC, XvYUV, LSBFirst, \
 	{'X', 'V', 'M', 'C', 0x00, 0x00, 0x00, 0x10, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71}, \
 	12, XvPlanar, 3, 0, 0, 0, 0, 8, 8, 8, 1, 2, 2, 1, 2, 2, \
 	{'Y', 'V', 'U', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, \
@@ -58,7 +58,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 }
 
 #define XVMC_RGB565 { \
-	FOURCC_RGB565, XvRGB, LSBFirst, \
+	INTEL_FOURCC_RGB565, XvRGB, LSBFirst, \
 	{'P', 'A', 'S', 'S', 'T', 'H', 'R', 'O', 'U', 'G', 'H', 'R', 'G', 'B', '1', '6'}, \
 	16, XvPacked, 1, 16, 0x1f<<11, 0x3f<<5, 0x1f<<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
 	{'B', 'G', 'R', 'X', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, \
@@ -66,7 +66,7 @@ THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 }
 
 #define XVMC_RGB888 { \
-	FOURCC_RGB888, XvRGB, LSBFirst, \
+	INTEL_FOURCC_RGB888, XvRGB, LSBFirst, \
 	{'P', 'A', 'S', 'S', 'T', 'H', 'R', 'O', 'U', 'G', 'H', 'R', 'G', 'B', '2', '4'}, \
 	32, XvPacked, 1, 24, 0xff<<16, 0xff<<8, 0xff<<0, 0, 0, 0, 0, 0, 0, 0, 0, 0, \
 	{'B', 'G', 'R', 'X', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, \
@@ -169,9 +169,9 @@ int sna_xv_free_port(XvPortPtr port);
 static inline int xvmc_passthrough(int id)
 {
 	switch (id) {
-	case FOURCC_XVMC:
-	case FOURCC_RGB565:
-	case FOURCC_RGB888:
+	case INTEL_FOURCC_XVMC:
+	case INTEL_FOURCC_RGB565:
+	case INTEL_FOURCC_RGB888:
 		return true;
 	default:
 		return false;
@@ -183,7 +183,7 @@ static inline int is_planar_fourcc(int id)
 	switch (id) {
 	case FOURCC_YV12:
 	case FOURCC_I420:
-	case FOURCC_XVMC:
+	case INTEL_FOURCC_XVMC:
 	case FOURCC_NV12:
 		return 1;
 	default:
