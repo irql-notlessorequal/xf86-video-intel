@@ -9295,12 +9295,11 @@ sna_poly_zero_line_blt(DrawablePtr drawable,
 				}
 				b->x2++;
 				b->y2++;
+				
 				if (oc1 | oc2) {
-					bool intersects;
-
-					intersects = box_intersect(b, extents);
-					assert(intersects);
+					assert(box_intersect(b, extents));
 				}
+
 				if (++b == last_box) {
 					ret = &&rectangle_continue;
 					goto *jump;
