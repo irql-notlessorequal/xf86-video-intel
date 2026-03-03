@@ -51,7 +51,7 @@ static const uint32_t ps_kernel_nomask_projective[][4] = {
 #include "exa_wm_write.g4b"
 };
 
-static const uint32_t ps_kernel_maskca_affine[][4] = {
+static const UNUSED uint32_t ps_kernel_maskca_affine[][4] = {
 #include "exa_wm_xy.g4b"
 #include "exa_wm_src_affine.g4b"
 #include "exa_wm_src_sample_argb.g4b"
@@ -61,7 +61,7 @@ static const uint32_t ps_kernel_maskca_affine[][4] = {
 #include "exa_wm_write.g4b"
 };
 
-static const uint32_t ps_kernel_maskca_projective[][4] = {
+static const UNUSED uint32_t ps_kernel_maskca_projective[][4] = {
 #include "exa_wm_xy.g4b"
 #include "exa_wm_src_projective.g4b"
 #include "exa_wm_src_sample_argb.g4b"
@@ -71,7 +71,7 @@ static const uint32_t ps_kernel_maskca_projective[][4] = {
 #include "exa_wm_write.g4b"
 };
 
-static const uint32_t ps_kernel_maskca_srcalpha_affine[][4] = {
+static const UNUSED uint32_t ps_kernel_maskca_srcalpha_affine[][4] = {
 #include "exa_wm_xy.g4b"
 #include "exa_wm_src_affine.g4b"
 #include "exa_wm_src_sample_a.g4b"
@@ -81,7 +81,7 @@ static const uint32_t ps_kernel_maskca_srcalpha_affine[][4] = {
 #include "exa_wm_write.g4b"
 };
 
-static const uint32_t ps_kernel_maskca_srcalpha_projective[][4] = {
+static const UNUSED uint32_t ps_kernel_maskca_srcalpha_projective[][4] = {
 #include "exa_wm_xy.g4b"
 #include "exa_wm_src_projective.g4b"
 #include "exa_wm_src_sample_a.g4b"
@@ -101,7 +101,7 @@ static const uint32_t ps_kernel_masknoca_affine[][4] = {
 #include "exa_wm_write.g4b"
 };
 
-static const uint32_t ps_kernel_masknoca_projective[][4] = {
+static const UNUSED uint32_t ps_kernel_masknoca_projective[][4] = {
 #include "exa_wm_xy.g4b"
 #include "exa_wm_src_projective.g4b"
 #include "exa_wm_src_sample_argb.g4b"
@@ -111,7 +111,7 @@ static const uint32_t ps_kernel_masknoca_projective[][4] = {
 #include "exa_wm_write.g4b"
 };
 
-static const uint32_t ps_kernel_packed_static[][4] = {
+static const UNUSED uint32_t ps_kernel_packed_static[][4] = {
 #include "exa_wm_xy.g4b"
 #include "exa_wm_src_affine.g4b"
 #include "exa_wm_src_sample_argb.g4b"
@@ -119,7 +119,7 @@ static const uint32_t ps_kernel_packed_static[][4] = {
 #include "exa_wm_write.g4b"
 };
 
-static const uint32_t ps_kernel_planar_static[][4] = {
+static const UNUSED uint32_t ps_kernel_planar_static[][4] = {
 #include "exa_wm_xy.g4b"
 #include "exa_wm_src_affine.g4b"
 #include "exa_wm_src_sample_planar.g4b"
