@@ -77,6 +77,7 @@ static const struct intel_device_info intel_i81x_info = {
 };
 #endif
 
+#if KMS
 static const struct intel_device_info intel_i830_info = {
 	.gen = 020,
 	.formats = 4,
@@ -445,6 +446,7 @@ static const struct intel_device_info intel_tigerlake_info = {
 		{ DRM_FORMAT_ABGR16161616F, I915_TILING_XY_SUPPORTED }
 	}
 };
+#endif
 
 static const SymTabRec intel_chipsets[] = {
 	{PCI_CHIP_I810,				"i810"},
