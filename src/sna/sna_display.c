@@ -3157,7 +3157,7 @@ sna_crtc_set_mode_major(xf86CrtcPtr crtc, DisplayModePtr mode,
 	assert(sna_crtc);
 
 	xf86DrvMsg(crtc->scrn->scrnIndex, X_INFO,
-		   "switch to mode %dx%d@%.1f on %s using crtc %d, position (%d, %d), rotation %s, reflection %s\n",
+		   "switch to mode %dx%d@%.3f on %s using crtc %d, position (%d, %d), rotation %s, reflection %s\n",
 		   mode->HDisplay, mode->VDisplay, xf86ModeVRefresh(mode),
 		   outputs_for_crtc(crtc, outputs, sizeof(outputs)), __sna_crtc_index(sna_crtc),
 		   x, y, rotation_to_str(rotation), reflection_to_str(rotation));
