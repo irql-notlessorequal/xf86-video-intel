@@ -319,6 +319,7 @@ static const char *stdformat_to_str(int id)
 	}
 }
 
+_X_ATTRIBUTE_PRINTF(2,3)
 static char *glyph_iter_to_string(struct glyph_iter *gi,
 				  const char *format,
 				  ...)
