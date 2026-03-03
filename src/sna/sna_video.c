@@ -237,7 +237,7 @@ sna_video_frame_set_rotation(struct sna_video *video,
 	align = video->alignment;
 #if SNA_XVMC
 	/* for i915 xvmc, hw requires 1kb aligned surfaces */
-	if (frame->id == FOURCC_XVMC && video->sna->kgem.gen < 040 && align < 1024)
+	if (frame->id == INTEL_FOURCC_XVMC && video->sna->kgem.gen < 040 && align < 1024)
 		align = 1024;
 #endif
 
@@ -291,7 +291,7 @@ sna_video_frame_set_rotation(struct sna_video *video,
 		}
 	} else {
 		switch (frame->id) {
-		case FOURCC_RGB888:
+		case INTEL_FOURCC_RGB888:
 		case FOURCC_AYUV:
 			if (rotation & (RR_Rotate_90 | RR_Rotate_270)) {
 				frame->pitch[0] = ALIGN((height << 2), align);
@@ -302,7 +302,7 @@ sna_video_frame_set_rotation(struct sna_video *video,
 			}
 			frame->UBufOffset = frame->VBufOffset = 0;
 			break;
-		case FOURCC_RGB565:
+		case INTEL_FOURCC_RGB565:
 			if (rotation & (RR_Rotate_90 | RR_Rotate_270)) {
 				frame->pitch[0] = ALIGN((height << 1), align);
 				frame->size = (int)frame->pitch[0] * width;

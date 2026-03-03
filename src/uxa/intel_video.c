@@ -137,7 +137,7 @@ XF86ImageRec intel_xv_images[NUM_IMAGES] = {
 	  * an overlay update. Introduced for the XvMC client lib.
 	  * Defined to have a zero data size.
 	  */
-	 FOURCC_XVMC,
+	 INTEL_FOURCC_XVMC,
 	 XvYUV,
 	 LSBFirst,
 	 {'X', 'V', 'M', 'C',
@@ -581,7 +581,7 @@ intel_setup_dst_params(ScrnInfoPtr scrn, intel_adaptor_private *adaptor_priv, sh
 
 #if INTEL_XVMC
 	/* for i915 xvmc, hw requires 1kb aligned surfaces */
-	if ((id == FOURCC_XVMC) && IS_GEN3(intel))
+	if ((id == INTEL_FOURCC_XVMC) && IS_GEN3(intel))
 		pitchAlign = 1024;
 #endif
 
@@ -690,7 +690,7 @@ int is_planar_fourcc(int id)
 	case FOURCC_YV12:
 	case FOURCC_I420:
 #ifdef INTEL_XVMC
-	case FOURCC_XVMC:
+	case INTEL_FOURCC_XVMC:
 #endif
 		return 1;
 	case FOURCC_UYVY:
@@ -831,7 +831,7 @@ intel_video_query_image_attributes(ScrnInfoPtr scrn,
 #endif
 		break;
 #ifdef INTEL_XVMC
-	case FOURCC_XVMC:
+	case INTEL_FOURCC_XVMC:
 		*h = (*h + 1) & ~1;
 		size = sizeof(struct intel_xvmc_command);
 		if (pitches)

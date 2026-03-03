@@ -1663,7 +1663,7 @@ static unsigned select_video_kernel(const struct sna_video *video,
 	switch (frame->id) {
 	case FOURCC_YV12:
 	case FOURCC_I420:
-	case FOURCC_XVMC:
+	case INTEL_FOURCC_XVMC:
 		return video->colorspace ?
 			GEN6_WM_KERNEL_VIDEO_PLANAR_BT709 :
 			GEN6_WM_KERNEL_VIDEO_PLANAR_BT601;
