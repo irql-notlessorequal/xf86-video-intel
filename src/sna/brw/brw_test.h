@@ -34,6 +34,15 @@
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
 #endif
 
+#if __has_attribute(__unused__)
+#define UNUSED __attribute__((unused))
+#elif defined (_MSC_VER)
+#define UNUSED __pragma(warning(suppress:4100 4101 4189))
+#else
+#define UNUSED
+#endif
+
+
 void brw_test_compare(const char *function, int gen,
 		      const struct brw_instruction *new, int num_new,
 		      const struct brw_instruction *old, int num_old);
