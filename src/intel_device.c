@@ -891,7 +891,7 @@ static int intel_is_same_file(int fd1, int fd2)
 	return (stat1.st_dev == stat2.st_dev) && (stat1.st_ino == stat2.st_ino);
 }
 
-static char *intel_str_replace(char *orig, char *rep, char *with)
+static char *intel_str_replace(char *orig, const char *rep, const char *with)
 {
 	char *result;
 	char *ins;
