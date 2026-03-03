@@ -36,6 +36,10 @@
 #include <xf86.h>
 #include <present.h>
 
+#if PRESENT_SCREEN_INFO_VERSION >= 1
+#define SNA_HAS_CHECK_FLIP2 1
+#endif
+
 static present_screen_info_rec present_info;
 
 struct sna_present_event {
@@ -601,14 +605,32 @@ check_flip__crtc(struct sna *sna,
 	return true;
 }
 
+#ifdef SNA_HAS_CHECK_FLIP2
+static force_inline void
+sna_present_mark_reason(PresentFlipReason *reason,
+						PresentFlipReason value)
+{
+	if (reason)
+		*reason = value;
+}
+
+static Bool
+sna_present_check_flip2(RRCrtcPtr crtc,
+						WindowPtr window,
+						PixmapPtr pixmap,
+						Bool sync_flip,
+						PresentFlipReason *reason)
+#else
 static Bool
 sna_present_check_flip(RRCrtcPtr crtc,
-		       WindowPtr window,
-		       PixmapPtr pixmap,
-		       Bool sync_flip)
+					   WindowPtr window,
+					   PixmapPtr pixmap,
+					   Bool sync_flip)
+#endif
 {
 	struct sna *sna = to_sna_from_pixmap(pixmap);
 	struct sna_pixmap *flip;
+	Bool can_async_flip = (sna->flags & SNA_HAS_ASYNC_FLIP);
 
 	DBG(("%s(crtc=%d, pixmap=%ld, sync_flip=%d)\n",
 	     __FUNCTION__,
@@ -632,7 +654,7 @@ sna_present_check_flip(RRCrtcPtr crtc,
 			return FALSE;
 		}
 	} else {
-		if ((sna->flags & SNA_HAS_ASYNC_FLIP) == 0) {
+		if (!can_async_flip) {
 			DBG(("%s: async flips not suported\n", __FUNCTION__));
 			return FALSE;
 		}
@@ -643,14 +665,18 @@ sna_present_check_flip(RRCrtcPtr crtc,
 		return FALSE;
 	}
 
-	if (!sync_flip && pixmap->usage_hint == SNA_PIXMAP_USAGE_DRI3_IMPORT) {
-		DBG(("%s: flip invalid for modifier\n", __FUNCTION__));
+	flip = sna_pixmap(pixmap);
+	if (unlikely(flip == NULL)) {
+		DBG(("%s: unattached pixmap\n", __FUNCTION__));
 		return FALSE;
 	}
 
-	flip = sna_pixmap(pixmap);
-	if (flip == NULL) {
-		DBG(("%s: unattached pixmap\n", __FUNCTION__));
+	if (can_async_flip &&
+		pixmap->usage_hint == SNA_PIXMAP_USAGE_DRI3_IMPORT) {
+		DBG(("%s: cannot flip DRI3 imports asynchronously\n", __FUNCTION__));
+#ifdef SNA_HAS_CHECK_FLIP2
+		sna_present_mark_reason(reason, PRESENT_FLIP_REASON_BUFFER_FORMAT);
+#endif
 		return FALSE;
 	}
 
@@ -663,21 +689,21 @@ sna_present_check_flip(RRCrtcPtr crtc,
 		assert(flip->gpu_bo);
 		if (sna->flags & SNA_LINEAR_FB) {
 			if (flip->gpu_bo->tiling != I915_TILING_NONE) {
-				DBG(("%s: pined bo, tilng=%d needs NONE\n",
+				DBG(("%s: pinned bo, tilng=%d needs NONE\n",
 				     __FUNCTION__, flip->gpu_bo->tiling));
 				return FALSE;
 			}
 		} else {
 			if (!sna->kgem.can_scanout_y &&
 			    flip->gpu_bo->tiling == I915_TILING_Y) {
-				DBG(("%s: pined bo, tilng=%d and can't scanout Y\n",
+				DBG(("%s: pinned bo, tilng=%d and can't scanout Y\n",
 				     __FUNCTION__, flip->gpu_bo->tiling));
 				return FALSE;
 			}
 		}
 
 		if (flip->gpu_bo->pitch & 63) {
-			DBG(("%s: pined bo, bad pitch=%d\n",
+			DBG(("%s: pinned bo, bad pitch=%d\n",
 			     __FUNCTION__, flip->gpu_bo->pitch));
 			return FALSE;
 		}
@@ -999,9 +1025,16 @@ static present_screen_info_rec present_info = {
 	.flush = sna_present_flush,
 
 	.capabilities = PresentCapabilityNone,
+#ifdef SNA_HAS_CHECK_FLIP2
+	.check_flip = NULL,
+#else
 	.check_flip = sna_present_check_flip,
+#endif
 	.flip = sna_present_flip,
 	.unflip = sna_present_unflip,
+#ifdef SNA_HAS_CHECK_FLIP2
+	.check_flip2 = sna_present_check_flip2,
+#endif
 };
 
 bool sna_present_open(struct sna *sna, ScreenPtr screen)
