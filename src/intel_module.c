@@ -69,11 +69,13 @@ static const struct intel_device_info intel_generic_info = {
 	.format_info = {}
 };
 
+#if UMS
 static const struct intel_device_info intel_i81x_info = {
 	.gen = 010,
 	.formats = 0,
 	.format_info = {}
 };
+#endif
 
 static const struct intel_device_info intel_i830_info = {
 	.gen = 020,
