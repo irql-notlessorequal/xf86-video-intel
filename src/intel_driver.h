@@ -114,10 +114,25 @@ struct xf86_platform_device;
 #define PCI_CHIP_HASWELL_CRW_E_GT2	0x0D1E
 #define PCI_CHIP_HASWELL_CRW_E_GT3	0x0D2E
 
-struct intel_device_info {
-	int gen;
+struct intel_format_info
+{
+	uint32_t format;
+	const uint64_t* modifiers;
 };
+
+struct intel_device_info
+{
+	unsigned int gen;
+	unsigned int formats;
+
+	/* primary plane formats only */
+	struct intel_format_info format_info[];
+};
+
 struct intel_device;
+
+const struct intel_format_info*
+get_format(const struct intel_device_info *info, uint32_t format);
 
 int intel_entity_get_devid(int index);
 
