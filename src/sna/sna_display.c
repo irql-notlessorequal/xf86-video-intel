@@ -61,6 +61,7 @@ void *alloca(size_t);
 
 #include "sna.h"
 #include "sna_reg.h"
+#include "sna_present.h"
 #include "fb/fbpict.h"
 #include "intel_options.h"
 #include "backlight.h"
@@ -9799,7 +9800,9 @@ again:
 		 */
 		struct drm_event_vblank *vbl = (struct drm_event_vblank *)e;
 		struct sna_crtc *crtc = (void *)(uintptr_t)vbl->user_data;
-		struct sna *sna_event = to_sna(crtc->base->scrn);
+		struct sna_present_event *info = to_present_event(((struct drm_event_vblank*)e)->user_data);
+		/* Extract the underlying sna depending on whether the event is dri2 vs sna_present */
+        struct sna *sna_event = ((uintptr_t)crtc & 2) ? info->sna : to_sna(crtc->base->scrn);
 
 		switch (e->type) {
 		case DRM_EVENT_VBLANK:

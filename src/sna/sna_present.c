@@ -32,9 +32,7 @@
 #include <xf86drm.h>
 
 #include "sna.h"
-
-#include <xf86.h>
-#include <present.h>
+#include "sna_present.h"
 
 #if PRESENT_SCREEN_INFO_VERSION >= 1
 #define SNA_HAS_CHECK_FLIP2 1
@@ -42,26 +40,9 @@
 
 static present_screen_info_rec present_info;
 
-struct sna_present_event {
-	xf86CrtcPtr crtc;
-	struct sna *sna;
-	struct list link;
-	uint64_t *event_id;
-	uint64_t target_msc;
-	int n_event_id;
-	bool queued:1;
-	bool active:1;
-};
-
 static void sna_present_unflip(ScreenPtr screen, uint64_t event_id);
 static bool sna_present_queue(struct sna_present_event *info,
-			      uint64_t last_msc);
-
-static inline struct sna_present_event *
-to_present_event(uintptr_t  data)
-{
-	return (struct sna_present_event *)(data & ~3);
-}
+							  uint64_t last_msc);
 
 static struct sna_present_event *info_alloc(struct sna *sna)
 {
@@ -160,7 +141,7 @@ static void vblank_complete(struct sna_present_event *info,
 				return;
 		}
 
-		DBG(("%s: %d events complete\n", __FUNCTION__, info->n_event_id));
+		DBG(("%s: %u events complete\n", __FUNCTION__, info->n_event_id));
 		for (n = 0; n < info->n_event_id; n++) {
 			DBG(("%s: certc=%d tv=%d.%06d msc=%lld (target=%lld), event=%lld complete%s\n", __FUNCTION__,
 			     sna_crtc_index(info->crtc),
@@ -226,7 +207,7 @@ static CARD32 sna_fake_vblank_handler(OsTimerPtr timer, CARD32 now, void *data)
 	union drm_wait_vblank vbl;
 	uint64_t msc, ust;
 
-	DBG(("%s(event=%lldx%d, now=%d)\n", __FUNCTION__, (long long)info->event_id[0], info->n_event_id, now));
+	DBG(("%s(event=%lldx%u, now=%d)\n", __FUNCTION__, (long long)info->event_id[0], info->n_event_id, now));
 	assert(info->queued);
 
 	VG_CLEAR(vbl);
@@ -299,7 +280,7 @@ static bool sna_fake_vblank(struct sna_present_event *info)
 	else
 		delay = 0;
 
-	DBG(("%s(event=%lldx%d, target_msc=%lld, msc=%lld, delay=%ums)\n",
+	DBG(("%s(event=%lldx%u, target_msc=%lld, msc=%lld, delay=%ums)\n",
 	     __FUNCTION__, (long long)info->event_id[0], info->n_event_id,
 	     (long long)info->target_msc, (long long)swap->msc, delay));
 	if (delay == 0) {
@@ -527,7 +508,7 @@ sna_present_queue_vblank(RRCrtcPtr crtc, uint64_t event_id, uint64_t msc)
 				tmp->event_id = events;
 			}
 
-			DBG(("%s: appending event=%lld to vblank %lld x %d\n",
+			DBG(("%s: appending event=%lld to vblank %lld x %u\n",
 			     __FUNCTION__, (long long)event_id, (long long)msc, tmp->n_event_id+1));
 			events[tmp->n_event_id++] = event_id;
 			return Success;
