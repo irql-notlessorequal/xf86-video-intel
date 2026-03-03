@@ -1156,7 +1156,7 @@ static int test_wrap_msc(Display *dpy)
 			complete = 1;
 		} else {
 			fprintf(stderr,
-				"\tnotify %d recieved at +%llu\n",
+				"\tnotify %d recieved at +%lu\n",
 				ce->serial, ce->msc - msc);
 			ret++;
 		}
