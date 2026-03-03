@@ -1,6 +1,12 @@
 #ifndef INTEL_DRIVER_H
 #define INTEL_DRIVER_H
 
+#if __has_attribute(__counted_by__)
+# define __COUNTED_BY(member) __attribute__((__counted_by__(member)))
+#else
+# define __COUNTED_BY(member) 
+#endif
+
 struct xf86_platform_device;
 
 #define INTEL_VERSION 4000
@@ -126,7 +132,7 @@ struct intel_device_info
 	unsigned int formats;
 
 	/* primary plane formats only */
-	struct intel_format_info format_info[];
+	struct intel_format_info format_info[] __COUNTED_BY(formats);
 };
 
 struct intel_device;
