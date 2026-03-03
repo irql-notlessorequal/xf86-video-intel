@@ -110,13 +110,13 @@ list_move(struct list *list, struct list *head)
 	}
 }
 
-#define __container_of(ptr, sample, member)				\
+#define _dri3_container_of(ptr, sample, member)				\
     (void *)((char *)(ptr) - ((char *)&(sample)->member - (char *)(sample)))
 
 #define list_for_each_entry(pos, head, member)				\
-    for (pos = __container_of((head)->next, pos, member);		\
+    for (pos = _dri3_container_of((head)->next, pos, member);		\
 	 &pos->member != (head);					\
-	 pos = __container_of(pos->member.next, pos, member))
+	 pos = _dri3_container_of(pos->member.next, pos, member))
 
 static int
 _check_error_handler(Display     *display,
