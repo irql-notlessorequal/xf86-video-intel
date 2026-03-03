@@ -63,12 +63,6 @@ static const uint64_t I915_TILING_X_SUPPORTED[4] =
 static const uint64_t I915_TILING_XY_SUPPORTED[4] =
 	{ I915_FORMAT_MOD_Y_TILED, I915_FORMAT_MOD_X_TILED, DRM_FORMAT_MOD_LINEAR, 0 };
 
-static const struct intel_device_info intel_generic_info = {
-	.gen = -1,
-	.formats = 0,
-	.format_info = {}
-};
-
 #if UMS
 static const struct intel_device_info intel_i81x_info = {
 	.gen = 010,
@@ -771,8 +765,6 @@ static const struct pci_id_match intel_device_match[] = {
 	INTEL_EHL_IDS(&intel_elkhartlake_info),
 
 	INTEL_TGL_12_IDS(&intel_tigerlake_info),
-
-	INTEL_VGA_DEVICE(PCI_MATCH_ANY, &intel_generic_info),
 #endif
 
 	{},
