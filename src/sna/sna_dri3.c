@@ -151,8 +151,8 @@ sna_sync_open(struct sna *sna, ScreenPtr screen)
 }
 
 static int sna_dri3_open_device(ScreenPtr screen,
-				RRProviderPtr provider,
-				int *out)
+								RRProviderPtr provider,
+								int *out)
 {
 	int fd;
 
@@ -166,12 +166,12 @@ static int sna_dri3_open_device(ScreenPtr screen,
 }
 
 static PixmapPtr sna_dri3_pixmap_from_fd(ScreenPtr screen,
-					 int fd,
-					 CARD16 width,
-					 CARD16 height,
-					 CARD16 stride,
-					 CARD8 depth,
-					 CARD8 bpp)
+										 int fd,
+										 CARD16 width,
+										 CARD16 height,
+										 CARD16 stride,
+										 CARD8 depth,
+										 CARD8 bpp)
 {
 	struct sna *sna = to_sna_from_screen(screen);
 	PixmapPtr pixmap;
@@ -298,9 +298,9 @@ free_bo:
 }
 
 static int sna_dri3_fd_from_pixmap(ScreenPtr screen,
-				   PixmapPtr pixmap,
-				   CARD16 *stride,
-				   CARD32 *size)
+								   PixmapPtr pixmap,
+								   CARD16 *stride,
+								   CARD32 *size)
 {
 	struct sna *sna = to_sna_from_screen(screen);
 	struct sna_pixmap *priv;
@@ -368,23 +368,104 @@ static int sna_dri3_fd_from_pixmap(ScreenPtr screen,
 	return fd;
 }
 
+#if DRI3_SCREEN_INFO_VERSION >= 2
+static int sna_dri3_get_formats(ScreenPtr screen,
+								CARD32 *num_formats,
+								CARD32 **formats)
+{
+	struct sna *sna = to_sna_from_screen(screen);
+	if (!sna)
+		goto bail;
+
+	const struct intel_device_info* info = sna->info;
+	if (!info->formats)
+		goto bail;
+
+	*num_formats = info->formats;
+	*formats = calloc(info->formats, sizeof(CARD32));
+	if (!*formats)
+		goto bail;
+
+	for (size_t index = 0; index < info->formats; index++)
+		*formats[index] = info->format_info[index].format;
+
+	return TRUE;
+bail:
+    *num_formats = 0;
+    return TRUE;
+}
+
+static int sna_dri3_get_modifiers(ScreenPtr screen,
+								  uint32_t format,
+								  uint32_t *num_modifiers,
+								  uint64_t **modifiers)
+{
+	size_t count = 0;
+	struct sna *sna = to_sna_from_screen(screen);
+	if (!sna)
+		goto fail;
+
+	const struct intel_device_info* info = sna->info;
+	if (!info->formats)
+		goto fail;
+
+	const struct intel_format_info* format_info = get_format(info, format);
+	if (!format_info)
+		goto fail;
+	
+	/* Count the amount of modifiers available. */
+	while (format_info->modifiers[count] != 0)
+		count++;
+
+	*num_modifiers = count;
+	*modifiers = malloc(count * sizeof(uint64_t));
+	if (!*modifiers)
+		goto bail;
+
+	memcpy(*modifiers, format_info->modifiers, count * sizeof(uint64_t));
+	return TRUE;
+bail:
+    *num_modifiers = 0;
+    return TRUE;
+fail:
+	*num_modifiers = 0;
+	return FALSE;
+}
+
+static int sna_dri3_get_drawable_modifiers(DrawablePtr drawable,
+										   uint32_t format,
+										   uint32_t *num_modifiers,
+										   uint64_t **modifiers)
+{
+	return sna_dri3_get_modifiers(drawable->pScreen, format,
+								  num_modifiers, modifiers);
+}
+#endif
+
 static dri3_screen_info_rec sna_dri3_info = {
 	.version = DRI3_SCREEN_INFO_VERSION,
 
 	.open = sna_dri3_open_device,
 	.pixmap_from_fd = sna_dri3_pixmap_from_fd,
 	.fd_from_pixmap = sna_dri3_fd_from_pixmap,
+
+#if DRI3_SCREEN_INFO_VERSION >= 2
+	.get_formats = sna_dri3_get_formats,
+	.get_modifiers = sna_dri3_get_modifiers,
+	.get_drawable_modifiers = sna_dri3_get_drawable_modifiers,
+#endif
 };
 
 bool sna_dri3_open(struct sna *sna, ScreenPtr screen)
 {
 	DBG(("%s()\n", __FUNCTION__));
 
-	if (!sna_sync_open(sna, screen))
+	if (!sna_sync_open(sna, screen)) {
 		return false;
-
-	list_init(&sna->dri3.pixmaps);
-	return dri3_screen_init(screen, &sna_dri3_info);
+	} else {
+		list_init(&sna->dri3.pixmaps);
+		return dri3_screen_init(screen, &sna_dri3_info);
+	}
 }
 
 void sna_dri3_close(struct sna *sna, ScreenPtr screen)
