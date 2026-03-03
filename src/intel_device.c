@@ -82,6 +82,20 @@ struct intel_device {
 
 static int intel_device_key = -1;
 
+const struct intel_format_info *
+get_format(const struct intel_device_info *info, uint32_t format)
+{
+	const struct intel_format_info *formats = info->format_info;
+	for (size_t idx = 0; idx < info->formats; idx++)
+	{
+		struct intel_format_info format_info = formats[idx];
+		if (format_info.format == format)
+			return &formats[idx];
+	}
+
+	return NULL;
+}
+
 static int dump_file(ScrnInfoPtr scrn, const char *path)
 {
 	FILE *file;
