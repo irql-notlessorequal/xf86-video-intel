@@ -1637,9 +1637,10 @@ struct span_thread {
 	RegionPtr clip;
 	span_func_t span;
 	BoxRec extents;
-	int dx, dy, draw_y;
+	int dx, dy;
 	int ntrap;
-	bool unbounded;
+	short draw_y;
+	short /* BOOL */ unbounded;
 };
 
 #define SPAN_THREAD_MAX_BOXES (8192/sizeof(struct sna_opacity_box))
@@ -2478,7 +2479,7 @@ struct inplace_x8r8g8b8_thread {
 	BoxRec extents;
 	int dx, dy;
 	int ntrap;
-	bool lerp, is_solid;
+	Bool lerp, is_solid;
 	uint32_t color;
 	int16_t src_x, src_y;
 	uint8_t op;
@@ -2826,7 +2827,7 @@ struct inplace_thread {
 	BoxRec extents;
 	int dx, dy;
 	int draw_x, draw_y;
-	bool unbounded;
+	Bool unbounded;
 	int ntrap;
 };
 
@@ -3255,9 +3256,10 @@ struct tristrip_thread {
 	RegionPtr clip;
 	span_func_t span;
 	BoxRec extents;
-	int dx, dy, draw_y;
+	int dx, dy;
 	int count;
-	bool unbounded;
+	short draw_y;
+	short /* BOOL */ unbounded;
 };
 
 static void

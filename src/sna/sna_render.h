@@ -41,12 +41,19 @@ struct sna_composite_op {
 
 	struct sna_damage **damage;
 
+	bool is_affine;
+	bool has_component_alpha;
+	bool need_magic_ca_pass;
+	bool rb_reversed;
 	uint32_t op;
+
+	int16_t floats_per_vertex;
+	int16_t floats_per_rect;
 
 	struct {
 		PixmapPtr pixmap; /* XXX */
-		CARD32 format;
 		struct kgem_bo *bo;
+		CARD32 format;
 		int16_t x, y;
 		uint16_t width, height;
 	} dst;
@@ -60,13 +67,13 @@ struct sna_composite_op {
 		uint32_t card_format;
 		uint32_t filter;
 		uint32_t repeat;
+		int16_t offset[2];
 		uint32_t is_affine : 1;
 		uint32_t is_solid : 1;
 		uint32_t is_linear : 1;
 		uint32_t is_opaque : 1;
 		uint32_t alpha_fixup : 1;
 		uint32_t rb_reversed : 1;
-		int16_t offset[2];
 		float scale[2];
 
 		pixman_transform_t embedded_transform;
@@ -85,13 +92,7 @@ struct sna_composite_op {
 			} gen3;
 		} u;
 	} src, mask;
-	uint32_t is_affine : 1;
-	uint32_t has_component_alpha : 1;
-	uint32_t need_magic_ca_pass : 1;
-	uint32_t rb_reversed : 1;
 
-	int16_t floats_per_vertex;
-	int16_t floats_per_rect;
 	fastcall void (*prim_emit)(struct sna *sna,
 				   const struct sna_composite_op *op,
 				   const struct sna_composite_rectangles *r);
@@ -108,18 +109,19 @@ struct sna_composite_op {
 	union {
 		struct sna_blt_state {
 			PixmapPtr src_pixmap;
-			int16_t sx, sy;
+			struct kgem_bo *bo[2];
 
-			uint32_t inplace :1;
-			uint32_t overwrites:1;
-			uint32_t bpp : 6;
-			uint32_t alu : 4;
+			int16_t sx, sy;
 
 			uint32_t cmd;
 			uint32_t br13;
 			uint32_t pitch[2];
 			uint32_t pixel;
-			struct kgem_bo *bo[2];
+
+			uint32_t inplace :1;
+			uint32_t overwrites:1;
+			uint32_t bpp : 6;
+			uint32_t alu : 4;
 		} blt;
 
 		struct {
@@ -128,8 +130,8 @@ struct sna_composite_op {
 		} gen3;
 
 		struct {
-			int wm_kernel;
-			int ve_id;
+			int16_t wm_kernel;
+			int16_t ve_id;
 		} gen4;
 
 		struct {
@@ -353,8 +355,8 @@ struct sna_render {
 
 struct gen2_render_state {
 	uint32_t target;
-	bool need_invariant;
-	uint32_t logic_op_enabled;
+	Bool need_invariant;
+	Bool logic_op_enabled;
 	uint32_t ls1, ls2, vft;
 	uint32_t diffuse;
 	uint32_t specular;
@@ -362,7 +364,7 @@ struct gen2_render_state {
 
 struct gen3_render_state {
 	uint32_t current_dst;
-	bool need_invariant;
+	Bool need_invariant;
 	uint32_t tex_count;
 	uint32_t last_drawrect_limit;
 	uint32_t last_target;
@@ -385,40 +387,40 @@ struct gen3_render_state {
 struct gen4_render_state {
 	struct kgem_bo *general_bo;
 
+	Bool needs_invariant;
+	Bool needs_urb;
+
 	uint32_t vs;
 	uint32_t sf;
 	uint32_t wm;
 	uint32_t cc;
 
-	int ve_id;
 	uint32_t drawrect_offset;
 	uint32_t drawrect_limit;
 	uint32_t last_pipelined_pointers;
 	uint16_t last_primitive;
-	int16_t floats_per_vertex;
+	uint16_t floats_per_vertex;
 	uint16_t surface_table;
-
-	bool needs_invariant;
-	bool needs_urb;
+	uint16_t ve_id;
 };
 
 struct gen5_render_state {
 	struct kgem_bo *general_bo;
+
+	Bool needs_invariant;
 
 	uint32_t vs;
 	uint32_t sf[2];
 	uint32_t wm;
 	uint32_t cc;
 
-	int ve_id;
 	uint32_t drawrect_offset;
 	uint32_t drawrect_limit;
 	uint32_t last_pipelined_pointers;
 	uint16_t last_primitive;
-	int16_t floats_per_vertex;
+	uint16_t floats_per_vertex;
 	uint16_t surface_table;
-
-	bool needs_invariant;
+	uint16_t ve_id;
 };
 
 enum {
@@ -450,6 +452,10 @@ enum {
 
 struct gen6_render_state {
 	unsigned gt;
+
+	bool needs_invariant;
+	bool first_state_packet;
+
 	const struct gt_info *info;
 	struct kgem_bo *general_bo;
 
@@ -470,11 +476,8 @@ struct gen6_render_state {
 	uint16_t num_sf_outputs;
 	uint16_t ve_id;
 	uint16_t last_primitive;
-	int16_t floats_per_vertex;
+	uint16_t floats_per_vertex;
 	uint16_t surface_table;
-
-	bool needs_invariant;
-	bool first_state_packet;
 };
 
 enum {
@@ -507,6 +510,12 @@ enum {
 
 struct gen7_render_state {
 	unsigned gt;
+
+	bool needs_invariant;
+	bool emit_flush;
+
+	uint16_t pipe_controls_since_stall;
+
 	const struct gt_info *info;
 	struct kgem_bo *general_bo;
 
@@ -527,12 +536,8 @@ struct gen7_render_state {
 	uint16_t num_sf_outputs;
 	uint16_t ve_id;
 	uint16_t last_primitive;
-	int16_t floats_per_vertex;
+	uint16_t floats_per_vertex;
 	uint16_t surface_table;
-	uint16_t pipe_controls_since_stall;
-
-	bool needs_invariant;
-	bool emit_flush;
 };
 
 
@@ -566,6 +571,10 @@ enum {
 
 struct gen8_render_state {
 	unsigned gt;
+
+	bool needs_invariant;
+	bool emit_flush;
+
 	const struct gt_info *info;
 	struct kgem_bo *general_bo;
 
@@ -586,11 +595,8 @@ struct gen8_render_state {
 	uint16_t num_sf_outputs;
 	uint16_t ve_id;
 	uint16_t last_primitive;
-	int16_t floats_per_vertex;
+	uint16_t floats_per_vertex;
 	uint16_t surface_table;
-
-	bool needs_invariant;
-	bool emit_flush;
 };
 
 enum {
@@ -626,6 +632,11 @@ enum {
 
 struct gen9_render_state {
 	unsigned gt;
+
+	bool needs_invariant;
+	bool emit_flush;
+	bool ve_dirty;
+
 	const struct gt_info *info;
 	struct kgem_bo *general_bo;
 
@@ -646,12 +657,8 @@ struct gen9_render_state {
 	uint16_t num_sf_outputs;
 	uint16_t ve_id;
 	uint16_t last_primitive;
-	int16_t floats_per_vertex;
+	uint16_t floats_per_vertex;
 	uint16_t surface_table;
-
-	bool needs_invariant;
-	bool emit_flush;
-	bool ve_dirty;
 };
 
 struct sna_static_stream {
