@@ -45,4 +45,7 @@ to_present_event(uintptr_t  data)
 	return (struct sna_present_event *)(data & ~3);
 }
 
+void
+sna_crtc_damage(xf86CrtcPtr crtc);
+
 #endif // SNA_PRESENT_H

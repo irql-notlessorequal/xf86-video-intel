@@ -2944,7 +2944,7 @@ static void sna_crtc_randr(xf86CrtcPtr crtc)
 	     crtc->bounds.x2, crtc->bounds.y2));
 }
 
-static void
+void
 sna_crtc_damage(xf86CrtcPtr crtc)
 {
 	ScreenPtr screen = xf86ScrnToScreen(crtc->scrn);
