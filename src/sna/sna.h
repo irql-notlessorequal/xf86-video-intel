@@ -287,19 +287,20 @@ struct sna {
 #define AVX 0x80
 #define AVX2 0x100
 
-	bool ignore_copy_area : 1;
-
 	unsigned watch_shm_flush;
 	unsigned watch_dri_flush;
 	unsigned damage_event;
-	bool needs_shm_flush;
-	bool needs_dri_flush;
+	unsigned vblank_interval;
+
+	Bool needs_shm_flush;
+	Bool needs_dri_flush;
+	Bool ignore_copy_area;
+	/* Gen7 full blitter mode */
+	Bool mitigations_active;
 
 	struct timeval timer_tv;
 	uint32_t timer_expire[NUM_TIMERS];
 	uint16_t timer_active;
-
-	int vblank_interval;
 
 	struct list flush_pixmaps;
 	struct list active_pixmaps;
@@ -308,40 +309,42 @@ struct sna {
 	PixmapPtr freed_pixmap;
 
 	struct sna_mode {
-		DamagePtr shadow_damage;
-		struct kgem_bo *shadow;
+		uint32_t *encoders;
+		Bool (*rrGetInfo)(ScreenPtr, Rotation *);
+
 		unsigned front_active;
-		unsigned shadow_active;
 		unsigned rr_active;
 		unsigned flip_active;
 		unsigned hidden;
-		bool shadow_enabled;
-		bool dirty;
 
+		int max_crtc_width;
+        int max_crtc_height;
+
+    	unsigned num_real_crtc;
+		unsigned num_real_output;
+		unsigned num_real_encoder;
+        unsigned num_fake;
+		unsigned serial;
+
+        Bool dirty;
+		Bool shadow_enabled;
+		Bool shadow_dirty;
+		unsigned shadow_active;
+
+		DamagePtr shadow_damage;
+		struct kgem_bo *shadow;
 		struct drm_event_vblank *shadow_events;
-		int shadow_nevent;
-		int shadow_size;
+		uint32_t shadow_nevent;
+		uint32_t shadow_size;
 
-		int max_crtc_width, max_crtc_height;
 		RegionRec shadow_region;
 		RegionRec shadow_cancel;
 		struct list shadow_crtc;
-		bool shadow_dirty;
-
-		unsigned num_real_crtc;
-		unsigned num_real_output;
-		unsigned num_real_encoder;
-		unsigned num_fake;
-		unsigned serial;
-
-		uint32_t *encoders;
 
 #if HAVE_UDEV
 		struct udev_monitor *backlight_monitor;
 		pointer backlight_handler;
 #endif
-
-		Bool (*rrGetInfo)(ScreenPtr, Rotation *);
 	} mode;
 
 	struct {
@@ -414,11 +417,15 @@ struct sna {
 	CloseScreenProcPtr CloseScreen;
 
 	PicturePtr clear;
-	struct {
+	union {
 		uint32_t fill_bo;
 		uint32_t fill_pixel;
 		uint32_t fill_alu;
 	} blt_state;
+
+	/* Driver phase/state information */
+	Bool suspended;
+
 	union {
 		unsigned gt;
 		struct gen2_render_state gen2;
@@ -433,11 +440,6 @@ struct sna {
 
 	/* Broken-out options. */
 	OptionInfoPtr Options;
-
-	/* Driver phase/state information */
-	Bool suspended;
-	/* Gen7 full blitter mode */
-	Bool mitigations_active;
 
 #if HAVE_UDEV
 	struct udev_monitor *uevent_monitor;

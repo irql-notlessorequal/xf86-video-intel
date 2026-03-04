@@ -1673,7 +1673,7 @@ static void defer_event(struct sna *sna, struct drm_event *base)
 		void *ptr;
 
 		ptr = realloc(sna->mode.shadow_events,
-			      sizeof(struct drm_event_vblank)*size);
+					  sizeof(struct drm_event_vblank) * size);
 		if (!ptr)
 			return;
 
