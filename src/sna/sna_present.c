@@ -558,11 +558,11 @@ sna_present_flush(WindowPtr window)
 
 static bool
 check_flip__crtc(struct sna *sna,
-		 RRCrtcPtr crtc)
+				 RRCrtcPtr crtc)
 {
 	if (!sna_crtc_is_on(crtc->devPrivate)) {
 		DBG(("%s: CRTC off\n", __FUNCTION__));
-		return false;
+		return FALSE;
 	}
 
 	assert(sna->scrn->vtSema);
@@ -574,10 +574,10 @@ check_flip__crtc(struct sna *sna,
 
 	if (sna->mode.rr_active) {
 		DBG(("%s: RandR transformation active\n", __FUNCTION__));
-		return false;
+		return FALSE;
 	}
 
-	return true;
+	return TRUE;
 }
 
 #ifdef SNA_HAS_CHECK_FLIP2
@@ -605,7 +605,7 @@ sna_present_check_flip(RRCrtcPtr crtc,
 {
 	struct sna *sna = to_sna_from_pixmap(pixmap);
 	struct sna_pixmap *flip;
-	Bool can_async_flip = (sna->flags & SNA_HAS_ASYNC_FLIP);
+	uint32_t flip_type = sync_flip ? SNA_HAS_FLIP : SNA_HAS_ASYNC_FLIP;
 
 	DBG(("%s(crtc=%d, pixmap=%ld, sync_flip=%d)\n",
 	     __FUNCTION__,
@@ -623,16 +623,9 @@ sna_present_check_flip(RRCrtcPtr crtc,
 		return FALSE;
 	}
 
-	if (sync_flip) {
-		if ((sna->flags & SNA_HAS_FLIP) == 0) {
-			DBG(("%s: sync flips not suported\n", __FUNCTION__));
-			return FALSE;
-		}
-	} else {
-		if (!can_async_flip) {
-			DBG(("%s: async flips not suported\n", __FUNCTION__));
-			return FALSE;
-		}
+	if ((sna->flags & flip_type) == 0) {
+		DBG(("%s: unsupported flip type\n", __FUNCTION__));
+		return FALSE;
 	}
 
 	if (!check_flip__crtc(sna, crtc)) {
@@ -646,8 +639,7 @@ sna_present_check_flip(RRCrtcPtr crtc,
 		return FALSE;
 	}
 
-	if (can_async_flip &&
-		pixmap->usage_hint == SNA_PIXMAP_USAGE_DRI3_IMPORT) {
+	if (pixmap->usage_hint == SNA_PIXMAP_USAGE_DRI3_IMPORT) {
 		DBG(("%s: cannot flip DRI3 imports asynchronously\n", __FUNCTION__));
 #ifdef SNA_HAS_CHECK_FLIP2
 		sna_present_mark_reason(reason, PRESENT_FLIP_REASON_BUFFER_FORMAT);
@@ -769,6 +761,134 @@ do_flip(struct sna *sna,
 	return TRUE;
 }
 
+/*
+ * fake_flip - satisfy a PRESENT pageflip request while TearFree is active.
+ *
+ * TearFree owns the hardware CRTCs via its shadow double-buffer, so we cannot
+ * issue a real DRM_IOCTL_MODE_PAGE_FLIP here.  Instead we:
+ *
+ *   1. Copy the PRESENT client buffer (bo) into the TearFree front pixmap's
+ *      GPU bo at the CRTC's screen coordinates.  This is the buffer TearFree
+ *      will read from when compositing the next shadow frame.
+ *
+ *   2. Flush the GPU batch so the copy is ordered before TearFree's next
+ *      redisplay blit.
+ *
+ *   3. Damage the CRTC's screen region so sna_mode_redisplay() knows to
+ *      copy from the front pixmap into the shadow buffer and issue a hardware
+ *      flip on the next vblank.
+ *
+ *   4. Queue a kernel vblank event at target_msc to deliver the PRESENT
+ *      completion notification, exactly as a real flip would.
+ *
+ * The net result is that PRESENT clients get correct frame pacing and
+ * completion events while TearFree continues to drive the hardware.
+ */
+static Bool
+fake_flip(struct sna *sna,
+		  RRCrtcPtr crtc,
+		  uint64_t event_id,
+		  uint64_t target_msc,
+		  struct kgem_bo *bo,
+		  PixmapPtr pixmap)
+{
+	xf86CrtcPtr xf86crtc = crtc->devPrivate;
+	struct sna_pixmap *front_priv;
+	struct sna_present_event *info, *tmp;
+	struct list *q;
+	BoxRec box;
+
+	DBG(("%s(crtc=%d, event=%lld, msc=%lld): TearFree active, faking via shadow copy\n",
+	     __FUNCTION__,
+	     crtc_index_from_crtc(crtc),
+	     (long long)event_id,
+	     (long long)target_msc));
+
+	/*
+	 * Use sna_pixmap_move_to_gpu() rather than the raw sna_pixmap() lookup.
+	 * After each TearFree hardware flip, set_shadow() sets
+	 * priv->move_to_gpu = wait_for_shadow.  wait_for_shadow swaps
+	 * priv->gpu_bo with sna->mode.shadow, ensuring gpu_bo is the idle
+	 * back-buffer and shadow is the buffer currently on screen.
+	 *
+	 * sna_pixmap() bypasses this callback, so gpu_bo would still point to
+	 * the live scanout buffer — writing into it causes hardware tearing and
+	 * sna_mode_redisplay() would see new == crtc->bo and skip the flip
+	 * entirely, meaning the client never receives a completion event.
+	 */
+	front_priv = sna_pixmap_move_to_gpu(sna->front,
+					MOVE_WRITE | MOVE_READ | __MOVE_SCANOUT);
+	if (unlikely(front_priv == NULL || front_priv->gpu_bo == NULL)) {
+		DBG(("%s: no front gpu_bo to copy into\n", __FUNCTION__));
+		return FALSE;
+	}
+
+	/* The CRTC's screen-space region in the front (back) buffer. */
+	box.x1 = 0;
+	box.y1 = 0;
+	box.x2 = sna->scrn->virtualX;
+	box.y2 = sna->scrn->virtualY;
+
+	/*
+	 * Copy the client pixmap into the front buffer's GPU bo.
+	 * src_dx/dy shift the box origin back to (0,0) in the source pixmap,
+	 * so we read from the full client buffer (0,0)-(HDisplay,VDisplay)
+	 * and write it to (crtc->x, crtc->y) in the front buffer.
+	 */
+	if (!sna->render.copy_boxes(sna, GXcopy,
+								&pixmap->drawable, bo,
+								0, 0,
+								&sna->front->drawable,
+								front_priv->gpu_bo,
+								0, 0, &box, 1, 0)) {
+		DBG(("%s: copy_boxes failed\n", __FUNCTION__));
+		return FALSE;
+	}
+
+	/* Flush so the copy is GPU-ordered before TearFree's redisplay blit. */
+	kgem_submit(&sna->kgem);
+
+	/*
+	 * Mark the CRTC's region damaged so sna_mode_redisplay() will copy the
+	 * front buffer into the shadow buffer and issue the hardware page flip.
+	 */
+	sna_shadow_set_crtc(sna, xf86crtc, front_priv->gpu_bo);
+
+	/* Queue a vblank event to deliver the PRESENT completion at target_msc. */
+	info = info_alloc(sna);
+	if (unlikely(info == NULL))
+		return FALSE;
+
+	info->crtc = xf86crtc;
+	info->sna = sna;
+	info->event_id = (uint64_t *)(info + 1);
+	info->event_id[0] = event_id;
+	info->n_event_id = 1;
+	info->target_msc = target_msc;
+	info->active = false;
+
+	/* Sorted insertion: find the first queued entry with a later target. */
+	q = sna_crtc_vblank_queue(xf86crtc);
+	list_for_each_entry(tmp, q, link) {
+		if ((int64_t)(tmp->target_msc - target_msc) > 0)
+			break;
+	}
+	list_add_tail(&info->link, &tmp->link);
+	info->queued = false;
+
+	/* Only submit the kernel vblank request when at the head of the queue;
+	 * entries behind the head will be processed by vblank_complete() when
+	 * the head fires.  sna_present_queue() handles the sna_fake_vblank
+	 * fallback internally if the delta is too large or the ioctl fails. */
+	if (info->link.prev == q && !sna_present_queue(info, tmp->target_msc)) {
+		list_del(&info->link);
+		info_free(info);
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 static Bool
 flip__async(struct sna *sna,
 	    RRCrtcPtr crtc,
@@ -870,6 +990,7 @@ sna_present_flip(RRCrtcPtr crtc,
 {
 	struct sna *sna = to_sna_from_pixmap(pixmap);
 	struct kgem_bo *bo;
+	Bool shadow_enabled = sna->mode.shadow_enabled;
 
 	DBG(("%s(crtc=%d, event=%lld, msc=%lld, pixmap=%ld, sync?=%d)\n",
 	     __FUNCTION__,
@@ -885,23 +1006,23 @@ sna_present_flip(RRCrtcPtr crtc,
 
 	assert(sna->present.unflip == 0);
 
-	if (sna->flags & SNA_TEAR_FREE) {
-		DBG(("%s: disabling TearFree (was %s) in favour of Present flips\n",
-		     __FUNCTION__, sna->mode.shadow_enabled ? "enabled" : "disabled"));
-		sna->mode.shadow_enabled = false;
-	}
-	assert(!sna->mode.shadow_enabled);
-
-	if (sna->mode.flip_active) {
+	if (!shadow_enabled && sna->mode.flip_active) {
 		struct pollfd pfd;
 
 		DBG(("%s: flips still pending, stalling\n", __FUNCTION__));
 		pfd.fd = sna->kgem.fd;
 		pfd.events = POLLIN;
-		while (poll(&pfd, 1, 0) == 1)
-			sna_mode_wakeup(sna);
-		if (sna->mode.flip_active)
-			return FALSE;
+		/* Use a non-zero timeout so that flip completion events that
+		 * haven't yet landed in the fd (e.g. an in-flight flip) 
+		 * are given a chance to arrive before we give up.
+		 * 
+		 * A zero timeout causes an immediate return if the event is
+		 * still in transit, leaving flip_active > 0 and forcing a
+		 * spurious FALSE return that degrades to the blit path. */
+		do {
+			if (poll(&pfd, 1, 1) <= 0)
+				break;
+		} while (sna_mode_wakeup(sna) && sna->mode.flip_active);
 	}
 
 	bo = get_flip_bo(pixmap);
@@ -910,7 +1031,9 @@ sna_present_flip(RRCrtcPtr crtc,
 		return FALSE;
 	}
 
-	if (sync_flip)
+	if (shadow_enabled)
+		return fake_flip(sna, crtc, event_id, target_msc, bo, pixmap);
+	else if (sync_flip)
 		return flip(sna, crtc, event_id, target_msc, bo);
 	else
 		return flip__async(sna, crtc, event_id, target_msc, bo);
@@ -938,6 +1061,17 @@ notify:
 		return;
 	}
 
+	/*
+	 * Our fake_flip() never issued a hardware page flip — it only copied
+	 * into the TearFree front pixmap and damaged it.  The hardware scanout
+	 * was never changed from under TearFree, so there is nothing to
+	 * restore; just deliver the completion event.
+	 */
+	if (sna->mode.shadow_enabled) {
+		DBG(("%s: TearFree shadow active, fake unflip\n", __FUNCTION__));
+		goto notify;
+	}
+
 	if (sna->mode.flip_active) {
 		DBG(("%s: %d outstanding flips, queueing unflip\n", __FUNCTION__, sna->mode.flip_active));
 		assert(sna->present.unflip == 0);
@@ -950,13 +1084,6 @@ notify:
 	/* Are we unflipping after a failure that left our ScreenP in place? */
 	if (!sna_needs_page_flip(sna, bo))
 		goto notify;
-
-	assert(!sna->mode.shadow_enabled);
-	if (sna->flags & SNA_TEAR_FREE) {
-		DBG(("%s: %s TearFree after Present flips\n",
-		     __FUNCTION__, sna->mode.shadow_damage != NULL ? "enabling" : "disabling"));
-		sna->mode.shadow_enabled = sna->mode.shadow_damage != NULL;
-	}
 
 	if (bo == NULL) {
 reset_mode:
