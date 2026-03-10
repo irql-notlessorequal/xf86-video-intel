@@ -130,12 +130,94 @@ static int intel_dri3_fd_from_pixmap(ScreenPtr screen,
 	return fd;
 }
 
+#if DRI3_SCREEN_INFO_VERSION >= 2
+static int intel_dri3_get_formats(ScreenPtr screen,
+                                  CARD32 *num_formats,
+                                  CARD32 **formats)
+{
+    ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+    intel_screen_private *intel = intel_get_screen_private(scrn);
+    if (!intel)
+        goto bail;
+
+    const struct intel_device_info *info = intel->info;
+    if (!info->formats)
+        goto bail;
+
+    *num_formats = info->formats;
+    *formats = calloc(info->formats, sizeof(CARD32));
+    if (!*formats)
+        goto bail;
+
+    for (size_t index = 0; index < info->formats; index++)
+        *formats[index] = info->format_info[index].format;
+
+    return TRUE;
+bail:
+    *num_formats = 0;
+    return TRUE;
+}
+
+static int intel_dri3_get_modifiers(ScreenPtr screen,
+                                    uint32_t format,
+                                    uint32_t *num_modifiers,
+                                    uint64_t **modifiers)
+{
+    size_t count = 0;
+    ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
+    intel_screen_private *intel = intel_get_screen_private(scrn);
+    if (!intel)
+        goto fail;
+
+    const struct intel_device_info *info = intel->info;
+    if (!info->formats)
+        goto fail;
+
+    const struct intel_format_info* format_info = get_format(info, format);
+    if (!format_info)
+        goto fail;
+
+    /* Count the amount of modifiers available. */
+    while (format_info->modifiers[count] != 0)
+        count++;
+
+    *num_modifiers = count;
+    *modifiers = malloc(count * sizeof(uint64_t));
+    if (!*modifiers)
+        goto bail;
+
+    memcpy(*modifiers, format_info->modifiers, count * sizeof(uint64_t));
+    return TRUE;
+bail:
+    *num_modifiers = 0;
+    return TRUE;
+fail:
+	*num_modifiers = 0;
+	return FALSE;
+}
+
+static int intel_dri3_get_drawable_modifiers(DrawablePtr drawable,
+                                             uint32_t format,
+                                             uint32_t *num_modifiers,
+                                             uint64_t **modifiers)
+{
+    return intel_dri3_get_modifiers(drawable->pScreen, format,
+                                    num_modifiers, modifiers);
+}
+#endif
+
 static dri3_screen_info_rec intel_dri3_screen_info = {
         .version = DRI3_SCREEN_INFO_VERSION,
 
         .open = intel_dri3_open,
         .pixmap_from_fd = intel_dri3_pixmap_from_fd,
-        .fd_from_pixmap = intel_dri3_fd_from_pixmap
+        .fd_from_pixmap = intel_dri3_fd_from_pixmap,
+
+#if DRI3_SCREEN_INFO_VERSION >= 2
+        .get_formats = intel_dri3_get_formats,
+        .get_modifiers = intel_dri3_get_modifiers,
+        .get_drawable_modifiers = intel_dri3_get_drawable_modifiers
+#endif
 };
 
 Bool
