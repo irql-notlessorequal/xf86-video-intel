@@ -38,6 +38,7 @@
 #include <dri3.h>
 #include <misyncshm.h>
 #include <misyncstr.h>
+#include <drm_fourcc.h>
 
 static DevPrivateKeyRec sna_sync_fence_private_key;
 struct sna_sync_fence {
@@ -369,6 +370,117 @@ static int sna_dri3_fd_from_pixmap(ScreenPtr screen,
 }
 
 #if DRI3_SCREEN_INFO_VERSION >= 2
+static int sna_dri3_fds_from_pixmap(ScreenPtr screen,
+									PixmapPtr pixmap,
+									int *fds,
+									CARD32 *strides,
+									CARD32 *offsets,
+									CARD64 *modifier)
+{
+	static const CARD64 modifiers[] = {
+		DRM_FORMAT_MOD_LINEAR,
+		I915_FORMAT_MOD_X_TILED,
+		I915_FORMAT_MOD_Y_TILED
+	};
+
+	struct sna *sna = to_sna_from_screen(screen);
+	struct sna_pixmap *priv;
+	struct kgem_bo *bo = NULL;
+	int fd;
+
+	DBG(("%s(pixmap=%ld, width=%d, height=%d)\n", __FUNCTION__,
+	     pixmap->drawable.serialNumber, pixmap->drawable.width, pixmap->drawable.height));
+	if (pixmap == sna->front && sna->flags & SNA_TEAR_FREE) {
+		DBG(("%s: DRI3 protocol cannot support TearFree frontbuffers\n", __FUNCTION__));
+		return FALSE;
+	}
+
+	priv = sna_pixmap(pixmap);
+	if (priv && IS_STATIC_PTR(priv->ptr) && priv->cpu_bo) {
+		if (sna_pixmap_move_to_cpu(pixmap, MOVE_READ | MOVE_WRITE | MOVE_ASYNC_HINT))
+			bo = priv->cpu_bo;
+	} else {
+		priv = sna_pixmap_move_to_gpu(pixmap, MOVE_READ | MOVE_WRITE | MOVE_ASYNC_HINT | __MOVE_FORCE | __MOVE_DRI);
+		if (priv != NULL) {
+			sna_damage_all(&priv->gpu_damage, pixmap);
+			bo = priv->gpu_bo;
+		}
+	}
+	if (bo == NULL) {
+		DBG(("%s: pixmap not supported by GPU\n", __FUNCTION__));
+		return FALSE;
+	}
+	assert(priv != NULL);
+
+	if (bo->pitch > UINT16_MAX) {
+		DBG(("%s: pixmap pitch (%d) too large for DRI3 protocol\n",
+		     __FUNCTION__, bo->pitch));
+		return FALSE;
+	}
+
+	if (bo->tiling && !sna->kgem.can_fence) {
+		if (!sna_pixmap_change_tiling(pixmap, I915_TILING_NONE)) {
+			DBG(("%s: unable to discard GPU tiling (%d) for DRI3 protocol\n",
+			     __FUNCTION__, bo->tiling));
+			return FALSE;
+		}
+		bo = priv->gpu_bo;
+	}
+
+	fd = kgem_bo_export_to_prime(&sna->kgem, bo);
+	if (fd == -1) {
+		DBG(("%s: exporting handle=%d to fd failed\n", __FUNCTION__, bo->handle));
+		return FALSE;
+	}
+
+	if (bo == priv->gpu_bo)
+		priv->pinned |= PIN_DRI3;
+	list_move(&priv->cow_list, &sna->dri3.pixmaps);
+
+	mark_dri3_pixmap(sna, priv, bo);
+
+	fds[0] = fd;
+	offsets[0] = 0;
+	strides[0] = (priv->pinned & PIN_DRI3) ? priv->gpu_bo->pitch : priv->cpu_bo->pitch;
+	*modifier = modifiers[bo->tiling];
+
+	DBG(("%s: exporting %s pixmap=%ld, handle=%d, stride=%d, size=%d\n",
+	     __FUNCTION__,
+	     (priv->pinned & PIN_DRI3) ? "GPU" : "CPU", pixmap->drawable.serialNumber,
+	     (priv->pinned & PIN_DRI3) ? priv->gpu_bo->handle : priv->cpu_bo->handle,
+	     *stride, *size));
+	return TRUE;
+}
+
+static PixmapPtr sna_dri3_pixmap_from_fds(ScreenPtr pScreen, CARD8 num_fds,
+											  const int *fds,
+											  CARD16 width, CARD16 height,
+											  const CARD32 *strides,
+											  const CARD32 *offsets,
+											  CARD8 depth, CARD8 bpp,
+											  CARD64 modifier)
+{
+	/* We don't support any multi-planar modifiers (CCS) */
+	if (num_fds != 1)
+		return NULL;
+
+	if (*offsets != 0)
+		return NULL;
+
+	switch (modifier)
+	{
+	case DRM_FORMAT_MOD_LINEAR:
+	case DRM_FORMAT_MOD_INVALID:
+	case I915_FORMAT_MOD_X_TILED:
+	case I915_FORMAT_MOD_Y_TILED:
+		break;
+	default:
+		return NULL;
+	}
+
+	return sna_dri3_pixmap_from_fd(pScreen, *fds, width, height, (CARD16)*strides, depth, bpp);
+}
+
 static int sna_dri3_get_formats(ScreenPtr screen,
 								CARD32 *num_formats,
 								CARD32 **formats)
@@ -450,6 +562,8 @@ static dri3_screen_info_rec sna_dri3_info = {
 	.fd_from_pixmap = sna_dri3_fd_from_pixmap,
 
 #if DRI3_SCREEN_INFO_VERSION >= 2
+	.pixmap_from_fds = sna_dri3_pixmap_from_fds,
+	.fds_from_pixmap = sna_dri3_fds_from_pixmap,
 	.get_formats = sna_dri3_get_formats,
 	.get_modifiers = sna_dri3_get_modifiers,
 	.get_drawable_modifiers = sna_dri3_get_drawable_modifiers,
