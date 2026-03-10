@@ -60,8 +60,10 @@
 static const uint64_t I915_TILING_X_SUPPORTED[4] =
 	{ I915_FORMAT_MOD_X_TILED, DRM_FORMAT_MOD_LINEAR, 0, 0 };
 
+
+/* XXX: Exposing Y tiling currently breaks Vulkan... */
 static const uint64_t I915_TILING_XY_SUPPORTED[4] =
-	{ I915_FORMAT_MOD_Y_TILED, I915_FORMAT_MOD_X_TILED, DRM_FORMAT_MOD_LINEAR, 0 };
+	{ I915_FORMAT_MOD_X_TILED, DRM_FORMAT_MOD_LINEAR, 0, 0 };
 
 #if UMS
 static const struct intel_device_info intel_i81x_info = {

@@ -472,7 +472,9 @@ static PixmapPtr sna_dri3_pixmap_from_fds(ScreenPtr pScreen, CARD8 num_fds,
 	case DRM_FORMAT_MOD_LINEAR:
 	case DRM_FORMAT_MOD_INVALID:
 	case I915_FORMAT_MOD_X_TILED:
+#if 0
 	case I915_FORMAT_MOD_Y_TILED:
+#endif
 		break;
 	default:
 		return NULL;
