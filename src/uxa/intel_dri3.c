@@ -150,7 +150,7 @@ static int intel_dri3_get_formats(ScreenPtr screen,
         goto bail;
 
     for (size_t index = 0; index < info->formats; index++)
-        *formats[index] = info->format_info[index].format;
+        (*formats)[index] = info->format_info[index].format;
 
     return TRUE;
 bail:
