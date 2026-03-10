@@ -569,32 +569,34 @@ extern bool sna_wait_for_scanline(struct sna *sna, PixmapPtr pixmap,
 
 const struct ust_msc {
 	uint64_t msc;
-	int tv_sec;
-	int tv_usec;
+	uint32_t tv_sec;
+	uint32_t tv_usec;
 } *sna_crtc_last_swap(xf86CrtcPtr crtc);
 
 uint64_t sna_crtc_record_swap(xf86CrtcPtr crtc,
-			      int tv_sec, int tv_usec, unsigned seq);
+							  uint32_t tv_sec, uint32_t tv_usec, unsigned seq);
 
-static inline uint64_t sna_crtc_record_vblank(xf86CrtcPtr crtc,
-					      const union drm_wait_vblank *vbl)
+static inline uint64_t
+sna_crtc_record_vblank(xf86CrtcPtr crtc,
+					   const union drm_wait_vblank *vbl)
 {
 	return sna_crtc_record_swap(crtc,
-				    vbl->reply.tval_sec,
-				    vbl->reply.tval_usec,
-				    vbl->reply.sequence);
+								vbl->reply.tval_sec,
+								vbl->reply.tval_usec,
+								vbl->reply.sequence);
 }
 
-static inline uint64_t sna_crtc_record_event(xf86CrtcPtr crtc,
-					     struct drm_event_vblank *event)
+static inline uint64_t
+sna_crtc_record_event(xf86CrtcPtr crtc,
+					  struct drm_event_vblank *event)
 {
 	return sna_crtc_record_swap(crtc,
-				    event->tv_sec,
-				    event->tv_usec,
-				    event->sequence);
+								event->tv_sec,
+								event->tv_usec,
+								event->sequence);
 }
 
-static inline uint64_t ust64(int tv_sec, int tv_usec)
+static inline uint64_t ust64(long tv_sec, long tv_usec)
 {
 	return (uint64_t)tv_sec * 1000000 + tv_usec;
 }
