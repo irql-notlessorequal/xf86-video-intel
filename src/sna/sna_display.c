@@ -1718,16 +1718,15 @@ static bool wait_for_shadow(struct sna *sna,
 	int flip_active;
 	bool ret = true;
 
-	DBG(("%s: enabled? %d flags=%x, flips=%d, pixmap=%ld [front?=%d], handle=%d, shadow=%d\n",
-	     __FUNCTION__, sna->mode.shadow_enabled,
-	     flags, sna->mode.flip_active,
+	DBG(("%s: flags=%x, flips=%d, pixmap=%ld [front?=%d], handle=%d, shadow=%d\n",
+	     __FUNCTION__, flags, sna->mode.flip_active,
 	     pixmap->drawable.serialNumber, pixmap == sna->front,
 	     priv->gpu_bo->handle, sna->mode.shadow->handle));
 
 	assert(priv->move_to_gpu_data == sna);
 	assert(sna->mode.shadow != priv->gpu_bo);
 
-	if (flags == 0 || pixmap != sna->front || !sna->mode.shadow_enabled)
+	if (flags == 0 || pixmap != sna->front)
 		goto done;
 
 	assert(sna->mode.shadow_damage);
@@ -1985,7 +1984,6 @@ static bool sna_mode_enable_shadow(struct sna *sna)
 	assert(sna->mode.shadow == NULL);
 	assert(sna->mode.shadow_damage == NULL);
 	assert(sna->mode.shadow_active == 0);
-	assert(!sna->mode.shadow_enabled);
 
 	sna->mode.shadow_damage = DamageCreate(sna_mode_damage, NULL,
 					       DamageReportRawRegion,
@@ -1993,30 +1991,40 @@ static bool sna_mode_enable_shadow(struct sna *sna)
 	if (!sna->mode.shadow_damage)
 		return false;
 
-	DamageRegister(&sna->front->drawable, sna->mode.shadow_damage);
-	sna->mode.shadow_enabled = true;
+	DamageRegister(&screen->GetScreenPixmap(screen)->drawable, sna->mode.shadow_damage);
 	return true;
+}
+
+inline static PixmapPtr sna_screen_pixmap(struct sna *sna)
+{
+	return to_screen_from_sna(sna)->GetScreenPixmap(to_screen_from_sna(sna));
 }
 
 static void sna_mode_disable_shadow(struct sna *sna)
 {
 	struct sna_pixmap *priv;
+	struct notifier *nb;
 
 	if (!sna->mode.shadow_damage) {
-		assert(!sna->mode.shadow_enabled);
 		return;
 	}
 
 	DBG(("%s\n", __FUNCTION__));
 
+	nb = &sna->tearfree.hook[0];
+	if (nb->func) {
+		nb->func(sna, nb->data);
+		nb->func = NULL;
+	}
+	assert(sna->tearfree.hook[1].func == NULL);
+
 	priv = sna_pixmap(sna->front);
 	if (priv->move_to_gpu == wait_for_shadow)
 		priv->move_to_gpu(sna, priv, 0);
 
-	DamageUnregister(&sna->front->drawable, sna->mode.shadow_damage);
+	DamageUnregister(&sna_screen_pixmap(sna)->drawable, sna->mode.shadow_damage);
 	DamageDestroy(sna->mode.shadow_damage);
 	sna->mode.shadow_damage = NULL;
-	sna->mode.shadow_enabled = false;
 
 	if (sna->mode.shadow) {
 		sna->mode.shadow->active_scanout--;
@@ -6027,7 +6035,6 @@ sna_mode_resize(ScrnInfoPtr scrn, int width, int height)
 	for (i = 0; i < sna->mode.num_real_crtc; i++)
 		sna_crtc_disable_shadow(sna, to_sna_crtc(config->crtc[i]));
 	assert(sna->mode.shadow_active == 0);
-	assert(!sna->mode.shadow_enabled);
 	assert(sna->mode.shadow_damage == NULL);
 	assert(sna->mode.shadow == NULL);
 
@@ -9342,9 +9349,6 @@ void sna_mode_redisplay(struct sna *sna)
 		return;
 	}
 
-	if (!sna->mode.shadow_enabled)
-		return;
-
 	assert(sna->mode.shadow_damage);
 
 	DBG(("%s: posting shadow damage? %d (flips pending? %d, mode reconfiguration pending? %d)\n",
@@ -9754,6 +9758,12 @@ fixup_flip:
 			assert(old == sna->mode.shadow);
 			assert(old->refcnt >= 1);
 			set_shadow(sna, region);
+		} else {
+			if (sna->tearfree.hook[0].func) {
+				sna->tearfree.hook[0].func(sna, sna->tearfree.hook[0].data);
+				sna->tearfree.hook[0].func = NULL;
+			}
+			assert(sna->tearfree.hook[1].func == NULL);
 		}
 	} else
 		kgem_submit(&sna->kgem);
@@ -9806,7 +9816,7 @@ again:
 
 		switch (e->type) {
 		case DRM_EVENT_VBLANK:
-			if (sna_event->mode.flip_active && sna_event->mode.shadow_enabled)
+			if (sna_event->mode.flip_active && sna_event->mode.shadow_dirty)
 				defer_event(sna, e);
 			else if (((uintptr_t)crtc) & 2)
 				sna_present_vblank_handler(vbl);

@@ -327,7 +327,6 @@ struct sna {
 		unsigned serial;
 
         Bool dirty;
-		Bool shadow_enabled;
 		Bool shadow_dirty;
 		unsigned shadow_active;
 
@@ -346,6 +345,13 @@ struct sna {
 		pointer backlight_handler;
 #endif
 	} mode;
+
+	struct sna_tearfree {
+		struct notifier {
+			void (*func)(struct sna *, void *);
+			void *data;
+		} hook[2];
+	} tearfree;
 
 	struct {
 		struct sna_cursor *cursors;

@@ -861,6 +861,135 @@ get_flip_bo(PixmapPtr pixmap)
 	return priv->gpu_bo;
 }
 
+static bool set_front(struct sna *sna, PixmapPtr pixmap)
+{
+	RegionRec *damage;
+
+	DBG(("%s: pixmap=%ld\n", __FUNCTION__, pixmap->drawable.serialNumber));
+
+	if (pixmap == sna->front)
+		return false;
+
+	sna_pixmap_discard_shadow_damage(sna_pixmap(sna->front), NULL);
+	sna->front = pixmap;
+
+	/* We rely on unflip restoring the real front before any drawing */
+	damage = DamageRegion(sna->mode.shadow_damage);
+	RegionUninit(damage);
+	damage->extents.x1 = 0;
+	damage->extents.y1 = 0;
+	damage->extents.x2 = pixmap->drawable.width;
+	damage->extents.y2 = pixmap->drawable.height;
+	damage->data = NULL;
+
+	return true;
+}
+
+static void
+xchg_handler(struct sna *sna, void *data)
+{
+	struct sna_present_event *info = data;
+	const struct ust_msc *swap = sna_crtc_last_swap(info->crtc);
+
+	DBG(("%s: pipe=%d tv=%d.%06d msc=%lld (target=%lld), event=%lld complete\n", __FUNCTION__,
+		 sna_crtc_pipe(info->crtc),
+		 swap->tv_sec, swap->tv_usec,
+		 (long long)swap->msc,
+		 (long long)info->target_msc, (long long)info->event_id));
+	present_event_notify(info->event_id[0], swap_ust(swap), swap->msc);
+	info_free(info);
+}
+
+static Bool
+xchg(struct sna *sna, RRCrtcPtr crtc,
+	 uint64_t event_id, uint64_t target_msc,
+	 PixmapPtr pixmap, Bool sync_flip)
+{
+	struct sna_present_event *info;
+	bool queued;
+
+	DBG(("%s(pipe=%d, event=%lld, sync_flip=%d)\n",
+		 __FUNCTION__,
+		 pipe_from_crtc(crtc),
+		 (long long)event_id,
+		 sync_flip));
+
+	assert(sna->flags & SNA_TEAR_FREE);
+	assert(sna->mode.shadow_damage);
+	assert(sna_pixmap(pixmap) && sna_pixmap(pixmap)->gpu_bo);
+	assert(sync_flip);
+
+	/* This effectively disables TearFree giving the client direct
+	 * access into the scanout with their Pixmap.
+	 */
+	queued = set_front(sna, pixmap);
+
+	info = info_alloc(sna);
+	if (info == NULL)
+		return BadAlloc;
+
+	info->crtc = crtc->devPrivate;
+	info->sna = sna;
+	info->target_msc = target_msc;
+	info->event_id = (uint64_t *)(info + 1);
+	info->event_id[0] = event_id;
+	info->n_event_id = 1;
+	info->queued = false;
+	info->active = false;
+
+	if (queued)
+	{
+		struct notifier *nb;
+
+		nb = &sna->tearfree.hook[0];
+		if (nb->func)
+			nb++;
+		if (nb->func)
+		{
+			DBG(("%s: executing existing notifier\n", __FUNCTION__));
+			nb->func(sna, nb->data);
+		}
+		DBG(("%s: queueing tearfree notifier: sequence %d\n",
+			 __FUNCTION__, nb - &sna->tearfree.hook[0]));
+		nb->func = xchg_handler;
+		nb->data = info;
+	}
+	else
+	{
+		union drm_wait_vblank vbl;
+
+		DBG(("%s: queueing vblank notifier\n", __FUNCTION__));
+
+		VG_CLEAR(vbl);
+		vbl.request.type =
+			DRM_VBLANK_ABSOLUTE |
+			DRM_VBLANK_EVENT |
+			DRM_VBLANK_NEXTONMISS;
+		vbl.request.sequence = target_msc;
+		vbl.request.signal = (uintptr_t)MARK_PRESENT(info);
+		if (sna_wait_vblank(sna, &vbl, sna_crtc_pipe(info->crtc)))
+		{
+			DBG(("%s: vblank enqueue failed\n", __FUNCTION__));
+			if (!sna_fake_vblank(info))
+			{
+				free(info);
+				goto notify;
+			}
+		}
+	}
+
+	return TRUE;
+
+notify:
+	DBG(("%s: pipe=%d tv=%d.%06d msc=%lld (target=%lld), event=%lld complete\n", __FUNCTION__,
+		 pipe_from_crtc(crtc),
+		 gettime_ust64() / 1000000, gettime_ust64() % 1000000,
+		 (long long)sna_crtc_last_swap(crtc->devPrivate)->msc,
+		 (long long)target_msc, (long long)event_id));
+	present_event_notify(event_id, gettime_ust64(), target_msc);
+	return TRUE;
+}
+
 static Bool
 sna_present_flip(RRCrtcPtr crtc,
 		 uint64_t event_id,
@@ -885,13 +1014,15 @@ sna_present_flip(RRCrtcPtr crtc,
 
 	assert(sna->present.unflip == 0);
 
-	if (sna->flags & SNA_TEAR_FREE) {
-		DBG(("%s: disabling TearFree (was %s) in favour of Present flips\n",
-		     __FUNCTION__, sna->mode.shadow_enabled ? "enabled" : "disabled"));
-		sna->mode.shadow_enabled = false;
+	bo = get_flip_bo(pixmap);
+	if (bo == NULL) {
+		DBG(("%s: flip invalid bo\n", __FUNCTION__));
+		return FALSE;
 	}
-	assert(!sna->mode.shadow_enabled);
 
+	if (sna->flags & SNA_TEAR_FREE)
+		return xchg(sna, crtc, event_id, target_msc, pixmap, sync_flip);
+	
 	if (sna->mode.flip_active) {
 		struct pollfd pfd;
 
@@ -902,12 +1033,6 @@ sna_present_flip(RRCrtcPtr crtc,
 			sna_mode_wakeup(sna);
 		if (sna->mode.flip_active)
 			return FALSE;
-	}
-
-	bo = get_flip_bo(pixmap);
-	if (bo == NULL) {
-		DBG(("%s: flip invalid bo\n", __FUNCTION__));
-		return FALSE;
 	}
 
 	if (sync_flip)
@@ -938,6 +1063,11 @@ notify:
 		return;
 	}
 
+	if (sna->flags & SNA_TEAR_FREE) {
+		set_front(sna, screen->GetScreenPixmap(screen));
+		goto notify;
+	}
+
 	if (sna->mode.flip_active) {
 		DBG(("%s: %d outstanding flips, queueing unflip\n", __FUNCTION__, sna->mode.flip_active));
 		assert(sna->present.unflip == 0);
@@ -950,13 +1080,6 @@ notify:
 	/* Are we unflipping after a failure that left our ScreenP in place? */
 	if (!sna_needs_page_flip(sna, bo))
 		goto notify;
-
-	assert(!sna->mode.shadow_enabled);
-	if (sna->flags & SNA_TEAR_FREE) {
-		DBG(("%s: %s TearFree after Present flips\n",
-		     __FUNCTION__, sna->mode.shadow_damage != NULL ? "enabling" : "disabling"));
-		sna->mode.shadow_enabled = sna->mode.shadow_damage != NULL;
-	}
 
 	if (bo == NULL) {
 reset_mode:

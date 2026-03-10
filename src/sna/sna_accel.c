@@ -17562,9 +17562,6 @@ static bool has_shadow(struct sna *sna)
 {
 	DamagePtr damage;
 
-	if (!sna->mode.shadow_enabled)
-		return false;
-
 	damage = sna->mode.shadow_damage;
 	assert(damage);
 
@@ -17853,6 +17850,12 @@ static void sna_scanout_flush(struct sna *sna)
 	    sna_pixmap_force_to_gpu(priv->pixmap,
 				    MOVE_READ | MOVE_ASYNC_HINT | __MOVE_SCANOUT))
 		kgem_scanout_flush(&sna->kgem, priv->gpu_bo);
+
+	if (sna->tearfree.hook[0].func)
+		sna->tearfree.hook[0].func(sna, sna->tearfree.hook[0].data);
+
+	sna->tearfree.hook[0] = sna->tearfree.hook[1];
+	sna->tearfree.hook[1].func = NULL;
 
 	sna_mode_redisplay(sna);
 	sna_accel_post_damage(sna);
