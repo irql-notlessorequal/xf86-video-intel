@@ -531,7 +531,7 @@ static inline bool msc64(struct sna_crtc *sna_crtc, uint32_t seq, uint64_t *msc)
 }
 
 uint64_t sna_crtc_record_swap(xf86CrtcPtr crtc,
-			      int tv_sec, int tv_usec, unsigned seq)
+							  uint32_t tv_sec, uint32_t tv_usec, unsigned seq)
 {
 	struct sna_crtc *sna_crtc = to_sna_crtc(crtc);
 	uint64_t msc;
