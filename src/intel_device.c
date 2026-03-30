@@ -54,6 +54,7 @@
 #include <i915_drm.h>
 
 #ifdef XSERVER_PLATFORM_BUS
+#define HAVE_PCI_DEVICE_IS_BOOT_DISPLAY 1
 #include <xf86platformBus.h>
 #endif
 
