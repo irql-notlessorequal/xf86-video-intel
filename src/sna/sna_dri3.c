@@ -384,9 +384,12 @@ static force_inline
 int modifier_to_tiling(uint64_t modifier)
 {
 	switch (modifier) {
-	case I915_FORMAT_MOD_X_TILED: return I915_TILING_X;
-	case I915_FORMAT_MOD_Y_TILED: return I915_TILING_Y;
-	default:                      return I915_TILING_NONE;
+	case I915_FORMAT_MOD_X_TILED:              return I915_TILING_X;
+	case I915_FORMAT_MOD_Y_TILED:              return I915_TILING_Y;
+	case I915_FORMAT_MOD_Y_TILED_CCS:          return I915_TILING_Y;
+	case I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS: return I915_TILING_Y;
+	case I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS: return I915_TILING_Y;
+	default:                                   return I915_TILING_NONE;
 	}
 }
 
@@ -512,6 +515,9 @@ static PixmapPtr sna_dri3_pixmap_from_fds(ScreenPtr screen,
 	case DRM_FORMAT_MOD_LINEAR:
 	case I915_FORMAT_MOD_X_TILED:
 	case I915_FORMAT_MOD_Y_TILED:
+	case I915_FORMAT_MOD_Y_TILED_CCS:
+	case I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS:
+	case I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS:
 		break;
 	default:
 		DBG(("%s: unsupported modifier 0x%llx\n", __FUNCTION__, (long long)modifier));
@@ -673,9 +679,9 @@ static int sna_dri3_get_modifiers(ScreenPtr screen,
 	const struct intel_format_info* format_info = get_format(info, format);
 	if (!format_info)
 		goto fail;
-	
-	/* Count the amount of modifiers available. */
-	while (format_info->modifiers[count] != 0)
+
+	const uint64_t *mods = info->all_modifiers;
+	while (mods[count] != 0)
 		count++;
 
 	*num_modifiers = count;
@@ -683,7 +689,7 @@ static int sna_dri3_get_modifiers(ScreenPtr screen,
 	if (!*modifiers)
 		goto bail;
 
-	memcpy(*modifiers, format_info->modifiers, count * sizeof(uint64_t));
+	memcpy(*modifiers, mods, count * sizeof(uint64_t));
 	return TRUE;
 bail:
     *num_modifiers = 0;
@@ -698,8 +704,36 @@ static int sna_dri3_get_drawable_modifiers(DrawablePtr drawable,
 										   uint32_t *num_modifiers,
 										   uint64_t **modifiers)
 {
-	return sna_dri3_get_modifiers(drawable->pScreen, format,
-								  num_modifiers, modifiers);
+	size_t count = 0;
+	struct sna *sna = to_sna_from_screen(drawable->pScreen);
+	if (!sna)
+		goto fail;
+
+	const struct intel_device_info* info = sna->info;
+	if (!info->formats)
+		goto fail;
+
+	const struct intel_format_info* format_info = get_format(info, format);
+	if (!format_info)
+		goto fail;
+
+	const uint64_t *mods = format_info->modifiers;
+	while (mods[count] != 0)
+		count++;
+
+	*num_modifiers = count;
+	*modifiers = malloc(count * sizeof(uint64_t));
+	if (!*modifiers)
+		goto bail;
+
+	memcpy(*modifiers, mods, count * sizeof(uint64_t));
+	return TRUE;
+bail:
+    *num_modifiers = 0;
+    return TRUE;
+fail:
+	*num_modifiers = 0;
+	return FALSE;
 }
 #endif
 
