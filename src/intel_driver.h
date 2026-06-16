@@ -130,9 +130,8 @@ struct intel_device_info
 {
 	unsigned int gen;
 	unsigned int formats;
-
-	/* primary plane formats only */
-	struct intel_format_info format_info[] __COUNTED_BY(formats);
+	const uint64_t* all_modifiers;
+	const struct intel_format_info *format_info;
 };
 
 struct intel_device;
