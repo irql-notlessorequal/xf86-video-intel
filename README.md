@@ -44,6 +44,7 @@ documentation can be read with the following command:
 1. Fix for screen freezing if using PRIME and a secondary graphics card.
 2. Restoration and clean up of legacy options.
 3. Improved performance with the BLT (blitter) engine on Gen 7.x (Ivy Bridge/Haswell) era hardware when mitigations are disabled.
+4. DRI3 v1.2 support on SNA.
 
 ## Known issues.
 
@@ -55,14 +56,13 @@ Fixed in `master` branch as of November 7th 2024.
 
 Generation 11 (Ice Lake) and newer graphics are not supported.
 
-There are mostly no plans to address this, a solution is to use the `modesetting` driver included within X.Org.
+There are no plans to address this.
 
 ### Applications hang with the NVIDIA driver via PRIME.
 
-SNA is completely broken at the moment with the NVIDIA driver, the following solutions may work:
+SNA is broken at the moment with TearFree enabled, this is being worked on.
 
-1. Use `modesetting` or `uxa` on your iGPU
-2. Use `modesetting` for both iGPU and dGPU [1]
-3. Use Wayland.
+Workarounds are available including:
 
-[1] Requires a modified version of modesetting that correctly handles the NVIDIA driver.
+1. Using Wayland
+2. Using the `modesetting` DDX for your iGPU
