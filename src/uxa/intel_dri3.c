@@ -177,8 +177,8 @@ static int intel_dri3_get_modifiers(ScreenPtr screen,
     if (!format_info)
         goto fail;
 
-    /* Count the amount of modifiers available. */
-    while (format_info->modifiers[count] != 0)
+    const uint64_t *mods = info->all_modifiers;
+    while (mods[count] != 0)
         count++;
 
     *num_modifiers = count;
@@ -186,7 +186,7 @@ static int intel_dri3_get_modifiers(ScreenPtr screen,
     if (!*modifiers)
         goto bail;
 
-    memcpy(*modifiers, format_info->modifiers, count * sizeof(uint64_t));
+    memcpy(*modifiers, mods, count * sizeof(uint64_t));
     return TRUE;
 bail:
     *num_modifiers = 0;
@@ -201,8 +201,37 @@ static int intel_dri3_get_drawable_modifiers(DrawablePtr drawable,
                                              uint32_t *num_modifiers,
                                              uint64_t **modifiers)
 {
-    return intel_dri3_get_modifiers(drawable->pScreen, format,
-                                    num_modifiers, modifiers);
+    size_t count = 0;
+    ScrnInfoPtr scrn = xf86ScreenToScrn(drawable->pScreen);
+    intel_screen_private *intel = intel_get_screen_private(scrn);
+    if (!intel)
+        goto fail;
+
+    const struct intel_device_info *info = intel->info;
+    if (!info->formats)
+        goto fail;
+
+    const struct intel_format_info* format_info = get_format(info, format);
+    if (!format_info)
+        goto fail;
+
+    const uint64_t *mods = format_info->modifiers;
+    while (mods[count] != 0)
+        count++;
+
+    *num_modifiers = count;
+    *modifiers = malloc(count * sizeof(uint64_t));
+    if (!*modifiers)
+        goto bail;
+
+    memcpy(*modifiers, mods, count * sizeof(uint64_t));
+    return TRUE;
+bail:
+    *num_modifiers = 0;
+    return TRUE;
+fail:
+	*num_modifiers = 0;
+	return FALSE;
 }
 #endif
 
