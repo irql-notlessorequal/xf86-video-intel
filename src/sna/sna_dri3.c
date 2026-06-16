@@ -370,26 +370,31 @@ static int sna_dri3_fd_from_pixmap(ScreenPtr screen,
 }
 
 #if DRI3_SCREEN_INFO_VERSION >= 2
+static const uint64_t tiling_to_modifier[] = {
+	[I915_TILING_NONE] = DRM_FORMAT_MOD_LINEAR,
+	[I915_TILING_X]    = I915_FORMAT_MOD_X_TILED,
+	[I915_TILING_Y]    = I915_FORMAT_MOD_Y_TILED,
+};
+
 static force_inline
 uint64_t kgem_bo_modifier(struct kgem_bo *bo)
 {
-	switch (bo->tiling) {
-	case I915_TILING_X: return I915_FORMAT_MOD_X_TILED;
-	case I915_TILING_Y: return I915_FORMAT_MOD_Y_TILED;
-	default:            return DRM_FORMAT_MOD_LINEAR;
-	}
+	return tiling_to_modifier[bo->tiling];
 }
 
 static force_inline
 int modifier_to_tiling(uint64_t modifier)
 {
 	switch (modifier) {
-	case I915_FORMAT_MOD_X_TILED:              return I915_TILING_X;
-	case I915_FORMAT_MOD_Y_TILED:              return I915_TILING_Y;
-	case I915_FORMAT_MOD_Y_TILED_CCS:          return I915_TILING_Y;
-	case I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS: return I915_TILING_Y;
-	case I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS: return I915_TILING_Y;
-	default:                                   return I915_TILING_NONE;
+	case I915_FORMAT_MOD_X_TILED:
+		return I915_TILING_X;
+	case I915_FORMAT_MOD_Y_TILED:
+	case I915_FORMAT_MOD_Y_TILED_CCS:
+	case I915_FORMAT_MOD_Y_TILED_GEN12_RC_CCS:
+	case I915_FORMAT_MOD_Y_TILED_GEN12_MC_CCS:
+		return I915_TILING_Y;
+	default:
+		return I915_TILING_NONE;
 	}
 }
 
