@@ -120,6 +120,9 @@ struct xf86_platform_device;
 #define PCI_CHIP_HASWELL_CRW_E_GT2	0x0D1E
 #define PCI_CHIP_HASWELL_CRW_E_GT3	0x0D2E
 
+/* This is DRM_FORMAT_MOD_INVALID but kept here to avoid pulling in libdrm in SNA/UXA. */
+#define INVALID_MOD ((((__u64)0) << 56) | ((((1ULL << 56) - 1)) & 0x00ffffffffffffffULL))
+
 struct intel_format_info
 {
 	uint32_t format;

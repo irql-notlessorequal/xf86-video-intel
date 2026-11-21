@@ -178,7 +178,7 @@ static int intel_dri3_get_modifiers(ScreenPtr screen,
         goto fail;
 
     /* Count the amount of modifiers available. */
-    while (format_info->modifiers[count] != 0)
+    while (format_info->modifiers[count] != INVALID_MOD)
         count++;
 
     *num_modifiers = count;
